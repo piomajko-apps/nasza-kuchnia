@@ -74,9 +74,11 @@
   .chip{min-height:56px; display:inline-flex; align-items:center; gap:8px; padding:10px 18px;
     background:var(--surface); border:2px solid var(--border); border-radius:999px;
     font-size:1.05rem; color:var(--ink); cursor:pointer;}
-  .chip .tick{display:none; font-weight:800;}
+  .chip .tick, .chip .cross{display:none; font-weight:800;}
   .chip.on{background:var(--clay); border-color:var(--clay); color:#fff;}
   .chip.on .tick{display:inline;}
+  .chip.excl{background:#F7ECE7; border-color:var(--danger); color:var(--danger); text-decoration:line-through;}
+  .chip.excl .cross{display:inline;}
   /* ---- karty przepisow ---- */
   .card{display:block; width:100%; text-align:left; background:var(--surface); border:2px solid var(--border);
     border-radius:var(--radius); padding:18px 18px; margin-bottom:14px; cursor:pointer;}
@@ -176,12 +178,12 @@ const isSaved = (id)=> getSaved().some(r=>r.id===id);
 
 /* ---------- stan + nawigacja ---------- */
 let stack=[{view:"home"}];
-let ctx={ meal:null, selected:new Set(), results:[], offset:0 };
+let ctx={ meal:null, selected:new Set(), excluded:new Set(), results:[], offset:0 };
 const main=document.getElementById("main");
 
 function go(view, opts={}){ stack.push(Object.assign({view},opts)); render(); window.scrollTo(0,0); }
 function back(){ if(stack.length>1){ stack.pop(); render(); window.scrollTo(0,0);} }
-function home(){ stack=[{view:"home"}]; ctx.selected=new Set(); render(); window.scrollTo(0,0); }
+function home(){ stack=[{view:"home"}]; ctx.selected=new Set(); ctx.excluded=new Set(); render(); window.scrollTo(0,0); }
 
 function render(){
   const top=stack[stack.length-1];
@@ -241,7 +243,7 @@ function doSearch(){
 
 /* ---------- ekran skladnikow ---------- */
 function renderMeal(meal){
-  ctx.meal=meal; ctx.selected=new Set();
+  ctx.meal=meal; ctx.selected=new Set(); ctx.excluded=new Set();
   const recipes=RECIPES.filter(r=>r.m.includes(meal));
   // zbierz dostepne skladniki (tagi) z przepisow tego posilku
   const tagset=new Set(); recipes.forEach(r=>r.tags.forEach(t=>tagset.add(t)));
@@ -249,15 +251,15 @@ function renderMeal(meal){
   const grouped={};
   [...tagset].forEach(t=>{ const g=GROUPS[t]||"Inne"; (grouped[g]=grouped[g]||[]).push(t); });
   let h='<h2 class="screen">'+mealLabel[meal]+'</h2>';
-  h+='<p class="lead">Zaznacz, co masz w domu (możesz kilka). Nie musisz nic zaznaczać — wtedy pokażę propozycje dnia.</p>';
-  h+='<div class="selbar"><div class="selcount" id="selcount">Wybrane produkty: 0</div></div>';
+  h+='<p class="lead">Dotknij raz, aby zaznaczyć „mam w domu”. Dotknij ponownie, aby wykluczyć składnik, którego nie chcesz w przepisie. Trzeci dotyk czyści wybór. Nie musisz nic zaznaczać — wtedy pokażę propozycje dnia.</p>';
+  h+='<div class="selbar"><div class="selcount" id="selcount">Mam: 0 · Bez: 0</div></div>';
   GROUP_ORDER.forEach(g=>{
     if(!grouped[g]) return;
     grouped[g].sort((a,b)=>a.localeCompare(b));
     h+='<div class="grouplabel">'+g+'</div><div class="chips">';
     grouped[g].forEach(t=>{
       h+='<button class="chip" data-action="toggle-ing" data-ing="'+t+'" aria-pressed="false">'+
-         '<span class="tick">✓</span>'+t+'</button>';
+         '<span class="tick">✓</span><span class="cross">✕</span>'+t+'</button>';
     });
     h+='</div>';
   });
@@ -266,12 +268,15 @@ function renderMeal(meal){
 }
 function updateSelCount(){
   const el=document.getElementById("selcount");
-  if(el) el.textContent="Wybrane produkty: "+ctx.selected.size;
+  if(el) el.textContent="Mam: "+ctx.selected.size+" · Bez: "+ctx.excluded.size;
 }
 
 /* ---------- dopasowanie + wyniki ---------- */
-function rankRecipes(meal, selected){
-  const list=RECIPES.filter(r=>r.m.includes(meal));
+function rankRecipes(meal, selected, excluded){
+  let list=RECIPES.filter(r=>r.m.includes(meal));
+  if(excluded && excluded.size>0){
+    list=list.filter(r=> !r.tags.some(t=>excluded.has(t)));
+  }
   if(selected.size===0){ return shuffle(list.slice()); }
   return list.map(r=>{
     let score=0; r.tags.forEach(t=>{ if(selected.has(t)) score++; });
@@ -281,7 +286,7 @@ function rankRecipes(meal, selected){
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
 function showResults(){
-  ctx.results=rankRecipes(ctx.meal, ctx.selected);
+  ctx.results=rankRecipes(ctx.meal, ctx.selected, ctx.excluded);
   ctx.offset=0;
   go("results");
 }
@@ -291,10 +296,19 @@ function threeNow(){
   return out;
 }
 function renderResults(){
+  if(ctx.results.length===0){
+    let h='<h2 class="screen">Wybierz przepis</h2>';
+    h+='<div class="empty"><span class="big">🙈</span>Nie znalazłam przepisu bez wybranych składników.<br>Spróbuj odznaczyć któryś z wykluczonych produktów.</div>';
+    h+='<button class="primary-btn" data-action="back">Wróć i zmień wybór</button>';
+    main.innerHTML=h; return;
+  }
   const three=threeNow();
   let h='<h2 class="screen">Wybierz przepis</h2>';
-  if(ctx.selected.size>0){
-    h+='<p class="lead">Dopasowane do produktów: '+[...ctx.selected].join(", ")+'.</p>';
+  const parts=[];
+  if(ctx.selected.size>0) parts.push('Dopasowane do: '+[...ctx.selected].join(", "));
+  if(ctx.excluded.size>0) parts.push('Bez: '+[...ctx.excluded].join(", "));
+  if(parts.length){
+    h+='<p class="lead">'+parts.join(" · ")+'.</p>';
   }else{
     h+='<p class="lead">Trzy propozycje na '+mealLabel[ctx.meal].toLowerCase()+'.</p>';
   }
@@ -431,8 +445,16 @@ document.body.addEventListener("click", (e)=>{
   if(a==="do-search") return doSearch();
   if(a==="toggle-ing"){
     const ing=t.dataset.ing;
-    if(ctx.selected.has(ing)){ ctx.selected.delete(ing); t.classList.remove("on"); t.setAttribute("aria-pressed","false"); }
-    else { ctx.selected.add(ing); t.classList.add("on"); t.setAttribute("aria-pressed","true"); }
+    if(ctx.selected.has(ing)){
+      ctx.selected.delete(ing); ctx.excluded.add(ing);
+      t.classList.remove("on"); t.classList.add("excl"); t.setAttribute("aria-pressed","true");
+    } else if(ctx.excluded.has(ing)){
+      ctx.excluded.delete(ing);
+      t.classList.remove("excl"); t.setAttribute("aria-pressed","false");
+    } else {
+      ctx.selected.add(ing);
+      t.classList.add("on"); t.setAttribute("aria-pressed","true");
+    }
     return updateSelCount();
   }
   if(a==="show-results") return showResults();

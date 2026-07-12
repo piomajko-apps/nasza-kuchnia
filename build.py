@@ -16,25 +16,35 @@ EXCLUDE = {
     "sól","cynamon","wanilia","koperek","natka","majeranek","tymianek","liść laurowy",
     "lubczyk","bazylia","oliwa","olej rzepakowy","masło","woda","miód",
     "mąka orkiszowa","mąka ziemniaczana","mąka kukurydziana","bułka tarta",
+    "oregano","kurkuma",
 }
 GROUPS = {
     # Mieso i jaja
     "indyk":"Mięso i jaja","cielęcina":"Mięso i jaja","królik":"Mięso i jaja","kurczak":"Mięso i jaja",
     "chuda wołowina":"Mięso i jaja","jajka":"Mięso i jaja",
+    "schab":"Mięso i jaja","polędwiczka wieprzowa":"Mięso i jaja",
     # Ryby
     "łosoś":"Ryby","dorsz":"Ryby","pstrąg":"Ryby","sandacz":"Ryby","mintaj":"Ryby","morszczuk":"Ryby",
     # Nabial
     "mleko":"Nabiał","jogurt naturalny":"Nabiał","kefir":"Nabiał","maślanka":"Nabiał",
-    "twaróg półtłusty":"Nabiał","serek wiejski":"Nabiał","ser żółty łagodny":"Nabiał",
+    "twaróg półtłusty":"Nabiał","serek wiejski":"Nabiał","ser żółty łagodny":"Nabiał","mozzarella":"Nabiał",
     # Kasze i pieczywo
     "płatki owsiane":"Kasze i pieczywo","kasza jaglana":"Kasze i pieczywo","kasza gryczana":"Kasze i pieczywo",
-    "kasza manna":"Kasze i pieczywo","ryż":"Kasze i pieczywo","makaron":"Kasze i pieczywo",
-    "pieczywo orkiszowe":"Kasze i pieczywo",
+    "kasza manna":"Kasze i pieczywo","ryż":"Kasze i pieczywo","ryż basmati":"Kasze i pieczywo","makaron":"Kasze i pieczywo",
+    "pieczywo orkiszowe":"Kasze i pieczywo","chleb pszenny":"Kasze i pieczywo","chleb żytni":"Kasze i pieczywo",
+    "chleb na zakwasie":"Kasze i pieczywo","kajzerka":"Kasze i pieczywo","pieczywo graham":"Kasze i pieczywo",
+    "wafle ryżowe":"Kasze i pieczywo",
     # Warzywa
     "marchew":"Warzywa","cukinia":"Warzywa","dynia":"Warzywa","ziemniaki":"Warzywa","batat":"Warzywa",
     "ogórek":"Warzywa","sałata":"Warzywa","buraki":"Warzywa","pietruszka":"Warzywa","szpinak":"Warzywa",
+    "seler":"Warzywa","pomidor":"Warzywa","papryka":"Warzywa","rukola":"Warzywa","roszponka":"Warzywa",
+    "szparagi":"Warzywa","bakłażan":"Warzywa","rzodkiewka":"Warzywa",
     # Owoce
     "jabłko":"Owoce","gruszka":"Owoce","banan":"Owoce","borówki":"Owoce","brzoskwinia":"Owoce",
+    "śliwka":"Owoce","winogrona":"Owoce",
+    # Tluszcze i orzechy
+    "awokado":"Tłuszcze i orzechy","orzechy włoskie":"Tłuszcze i orzechy","migdały":"Tłuszcze i orzechy",
+    "orzechy laskowe":"Tłuszcze i orzechy",
 }
 
 def norm(name):
@@ -52,6 +62,7 @@ for i, r in enumerate(R):
             tags.append(n)
     recipes.append({
         "id": "r%03d" % (i+1),
+        "num": i+1,
         "t": r["t"],
         "m": r["m"],
         "c": r["c"],
@@ -142,6 +153,10 @@ HTML = r"""<!DOCTYPE html>
     border:2px solid var(--clay); color:var(--clay-dark); border-radius:var(--radius);
     font-size:1.1rem; font-weight:700; cursor:pointer; margin-top:12px;}
   .ghost-btn:active{background:var(--clay-soft);}
+  .search-input{width:100%; min-height:64px; font-size:1.3rem; padding:14px 18px; border:2px solid var(--border);
+    border-radius:var(--radius); margin-bottom:14px; background:var(--surface); color:var(--ink);}
+  .search-input:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
+  .search-error{color:var(--danger); font-weight:600; margin-top:14px;}
   /* ---- skladniki (chipsy) ---- */
   .selbar{position:sticky; top:calc(80px + env(safe-area-inset-top)); z-index:5;
     background:var(--paper); padding:6px 0 12px; margin-bottom:6px;}
@@ -236,7 +251,7 @@ const GROUPS = APP_DATA.groups;
 const MEALS = APP_DATA.meals;
 const byId = Object.fromEntries(RECIPES.map(r=>[r.id,r]));
 const mealLabel = Object.fromEntries(MEALS.map(m=>[m.key,m.label]));
-const GROUP_ORDER = ["Mięso i jaja","Ryby","Nabiał","Kasze i pieczywo","Warzywa","Owoce","Inne"];
+const GROUP_ORDER = ["Mięso i jaja","Ryby","Nabiał","Kasze i pieczywo","Warzywa","Owoce","Tłuszcze i orzechy","Inne"];
 const AL_LABEL = {gluten:"gluten", mleko:"nabiał / mleko", jaja:"jaja", ryby:"ryby", orzechy:"orzechy"};
 
 /* ---------- pamiec (localStorage z awaryjnym trybem) ---------- */
@@ -264,14 +279,16 @@ function home(){ stack=[{view:"home"}]; ctx.selected=new Set(); render(); window
 function render(){
   const top=stack[stack.length-1];
   document.getElementById("backBtn").style.visibility = stack.length>1 ? "visible":"hidden";
-  const titles={home:"Nasza Kuchnia", meal:"Wybierz składniki", results:"Propozycje", recipe:"Przepis", saved:"Moje przepisy"};
+  const titles={home:"Nasza Kuchnia", meal:"Wybierz składniki", results:"Propozycje", recipe:"Przepis", saved:"Moje przepisy", search:"Szukaj po numerze"};
   document.getElementById("barTitle").textContent = titles[top.view]||"Nasza Kuchnia";
   if(top.view==="home") return renderHome();
   if(top.view==="meal") return renderMeal(top.meal);
   if(top.view==="results") return renderResults();
   if(top.view==="recipe") return renderRecipe(top.id);
   if(top.view==="saved") return renderSaved();
+  if(top.view==="search") return renderSearch();
 }
+function numStr(n){ return String(n).padStart(3,"0"); }
 
 /* ---------- ekran glowny ---------- */
 function renderHome(){
@@ -285,7 +302,34 @@ function renderHome(){
   const n=getSaved().length;
   h += '<div class="saved-entry"><button class="meal-btn" data-action="go-saved">'+
        '<span class="emoji">⭐</span><span>Moje przepisy'+(n?(' ('+n+')'):'')+'</span><span class="arrow">›</span></button></div>';
+  h += '<div class="saved-entry"><button class="meal-btn" data-action="go-search">'+
+       '<span class="emoji">🔍</span><span>Szukaj po numerze</span><span class="arrow">›</span></button></div>';
   main.innerHTML=h;
+}
+
+/* ---------- wyszukiwarka po numerze ---------- */
+function renderSearch(){
+  let h='<h2 class="screen">Szukaj po numerze</h2>';
+  h+='<p class="lead">Każdy przepis, który wysyłasz w wiadomości, ma swój numer. Wpisz go tutaj, aby szybko go odnaleźć.</p>';
+  h+='<input class="search-input" id="searchNum" type="number" inputmode="numeric" min="1" placeholder="Numer przepisu, np. 042">';
+  h+='<button class="primary-btn" data-action="do-search">Szukaj</button>';
+  if(ctx.searchError!=null){
+    h+='<p class="search-error">Nie znaleziono przepisu o numerze „'+ctx.searchError+'”. Sprawdź numer i spróbuj ponownie.</p>';
+  }
+  main.innerHTML=h;
+  const inp=document.getElementById("searchNum");
+  if(inp){
+    inp.focus();
+    inp.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ e.preventDefault(); doSearch(); } });
+  }
+}
+function doSearch(){
+  const inp=document.getElementById("searchNum");
+  const raw=inp?inp.value.trim():"";
+  const num=parseInt(raw,10);
+  const found=RECIPES.find(r=>r.num===num);
+  if(found){ ctx.searchError=null; go("recipe",{id:found.id}); }
+  else{ ctx.searchError=raw||"?"; renderSearch(); }
 }
 
 /* ---------- ekran skladnikow ---------- */
@@ -367,6 +411,7 @@ function renderRecipe(id){
   const r=byId[id]; const saved=isSaved(id);
   let h='<h1 class="rtitle">'+r.t+'</h1>';
   h+='<div class="infogrid"><span class="badge">ok. '+r.kcal+' kcal · 1 porcja</span>'+
+     '<span class="catbadge">Nr '+numStr(r.num)+'</span>'+
      '<span class="catbadge">'+r.c+'</span>'+
      '<span class="catbadge">'+r.m.map(m=>mealLabel[m]).join(" · ")+'</span></div>';
   h+='<div class="seclabel">Alergeny</div>';
@@ -426,6 +471,7 @@ function renderSaved(){
 function recipeText(r){
   const L=[];
   L.push(r.t);
+  L.push("Numer przepisu: "+numStr(r.num));
   L.push("Kaloryczność: ok. "+r.kcal+" kcal (1 porcja)");
   L.push("Alergeny: "+(r.al.length? r.al.map(a=>AL_LABEL[a]).join(", "):"brak typowych"));
   L.push("");
@@ -435,6 +481,7 @@ function recipeText(r){
   L.push("Przygotowanie:");
   r.steps.forEach((s,i)=>L.push((i+1)+". "+s));
   L.push("");
+  L.push("Ten przepis znajdziesz w aplikacji, wpisując numer "+numStr(r.num)+" w wyszukiwarce.");
   L.push("— Nasza Kuchnia");
   return L.join("\n");
 }
@@ -473,6 +520,8 @@ document.body.addEventListener("click", (e)=>{
   if(a==="home") return home();
   if(a==="open-meal") return go("meal",{meal:t.dataset.meal});
   if(a==="go-saved") return go("saved");
+  if(a==="go-search"){ ctx.searchError=null; return go("search"); }
+  if(a==="do-search") return doSearch();
   if(a==="toggle-ing"){
     const ing=t.dataset.ing;
     if(ctx.selected.has(ing)){ ctx.selected.delete(ing); t.classList.remove("on"); t.setAttribute("aria-pressed","false"); }

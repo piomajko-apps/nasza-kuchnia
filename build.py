@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import json, os, hashlib
+import json, os, hashlib, re
 from recipes_data import R
 
 OUT = os.path.dirname(os.path.abspath(__file__))
@@ -50,6 +50,62 @@ GROUPS = {
 def norm(name):
     return NORM.get(name, name)
 
+# ---- szacunkowe kcal/100g dla skladnikow, ktore mozna wykluczyc z przepisu ----
+# (uzywane tylko do przyblizonego przeliczenia kalorii po usunieciu skladnika;
+# kasze/makaron/platki licza sie jako suchy produkt przed ugotowaniem)
+KCAL100 = {
+    "awokado":160,"bakłażan":25,"banan":90,"batat":85,"borówki":55,"brzoskwinia":45,"buraki":40,
+    "chleb na zakwasie":250,"chleb pszenny":265,"chleb żytni":220,"chuda wołowina":155,"cielęcina":110,
+    "cukinia":17,"dorsz":82,"dynia":26,"gruszka":57,"indyk":135,"jabłko":52,"jajka":143,
+    "jogurt naturalny":61,"kajzerka":275,"kasza gryczana":343,"kasza jaglana":378,"kasza manna":360,
+    "kefir":50,"królik":173,"kurczak":165,"makaron":350,"marchew":41,"maślanka":40,"migdały":579,
+    "mintaj":72,"mleko":62,"morszczuk":86,"mozzarella":280,"ogórek":15,"orzechy laskowe":646,
+    "orzechy włoskie":654,"papryka":31,"pieczywo graham":240,"pieczywo orkiszowe":246,"pietruszka":43,
+    "polędwiczka wieprzowa":143,"pomidor":18,"pstrąg":105,"płatki owsiane":372,"roszponka":21,
+    "rukola":25,"ryż":360,"ryż basmati":356,"rzodkiewka":16,"sandacz":84,"sałata":15,"schab":143,
+    "seler":34,"ser żółty łagodny":350,"serek wiejski":98,"szparagi":20,"szpinak":23,
+    "twaróg półtłusty":137,"wafle ryżowe":387,"winogrona":69,"ziemniaki":77,"łosoś":208,"śliwka":46,
+}
+# gramatura "1 szt." / "1 kromka" / "1 łyżka" dla skladnikow, ktore tak sa podawane
+PIECE_G = {"jajka":55,"kajzerka":50,"wafle ryżowe":9}
+SLICE_G = {"chleb na zakwasie":40,"chleb pszenny":30,"chleb żytni":30,"pieczywo graham":25,"pieczywo orkiszowe":30}
+TBSP_G = {"jogurt naturalny":20}
+
+def parse_grams(amount, tag):
+    m = re.match(r"^(\d+(?:[.,]\d+)?)\s*(\S+)", amount)
+    if not m:
+        return None
+    num = float(m.group(1).replace(",", "."))
+    unit = m.group(2).lower()
+    if unit.startswith("g"):
+        return num
+    if unit.startswith("ml"):
+        return num
+    if unit.startswith("szt"):
+        return num * PIECE_G.get(tag, 50)
+    if unit.startswith("kromk"):
+        return num * SLICE_G.get(tag, 30)
+    if "łyż" in unit:
+        return num * TBSP_G.get(tag, 15)
+    return None
+
+# ---- mapa skladnik -> kategoria alergenu (do przeliczenia alergenow po usunieciu skladnika) ----
+AL_GLUTEN = {"chleb na zakwasie","chleb pszenny","chleb żytni","kajzerka","pieczywo graham",
+             "pieczywo orkiszowe","kasza manna","makaron","mąka orkiszowa","płatki owsiane","bułka tarta"}
+AL_MLEKO = {"mleko","jogurt naturalny","kefir","maślanka","twaróg półtłusty","serek wiejski",
+            "ser żółty łagodny","mozzarella","masło"}
+AL_JAJA = {"jajka"}
+AL_RYBY = {"łosoś","dorsz","pstrąg","sandacz","mintaj","morszczuk"}
+AL_ORZECHY = {"migdały","orzechy włoskie","orzechy laskowe","masło migdałowe"}
+
+def allergen_for(tag):
+    if tag in AL_GLUTEN: return "gluten"
+    if tag in AL_MLEKO: return "mleko"
+    if tag in AL_JAJA: return "jaja"
+    if tag in AL_RYBY: return "ryby"
+    if tag in AL_ORZECHY: return "orzechy"
+    return None
+
 # ---- budowa listy przepisow z id i tagami ----
 recipes = []
 for i, r in enumerate(R):
@@ -60,6 +116,12 @@ for i, r in enumerate(R):
             continue
         if n not in tags:
             tags.append(n)
+    ing_out = []
+    for name, amt in r["ing"]:
+        tag = norm(name)
+        grams = parse_grams(amt, tag)
+        kcal_val = round(grams/100*KCAL100[tag]) if (tag in KCAL100 and grams is not None) else None
+        ing_out.append([name, amt, tag, kcal_val, allergen_for(tag)])
     recipes.append({
         "id": "r%03d" % (i+1),
         "num": i+1,
@@ -68,7 +130,7 @@ for i, r in enumerate(R):
         "c": r["c"],
         "al": r["al"],
         "kcal": r["kcal"],
-        "ing": [[n, a] for n, a in r["ing"]],
+        "ing": ing_out,
         "steps": r["steps"],
         "tags": tags,
     })
@@ -157,6 +219,15 @@ HTML = r"""<!DOCTYPE html>
     border-radius:var(--radius); margin-bottom:14px; background:var(--surface); color:var(--ink);}
   .search-input:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
   .search-error{color:var(--danger); font-weight:600; margin-top:14px;}
+  /* ---- tryb wykluczania skladnikow ---- */
+  .modebox{margin-bottom:16px;}
+  .modelabel{font-size:.95rem; font-weight:700; color:var(--clay-dark); margin-bottom:8px;}
+  .mode-btn{display:block; width:100%; min-height:58px; text-align:left; padding:12px 16px;
+    background:var(--surface); border:2px solid var(--border); border-radius:14px; color:var(--ink);
+    font-size:1rem; cursor:pointer; margin-bottom:8px;}
+  .mode-btn.on{background:var(--clay-soft); border-color:var(--clay); font-weight:700; color:var(--clay-dark);}
+  .approx-note{background:#F7ECE7; color:#9a4a2c; border:1px solid #e6c3b4; border-radius:14px;
+    padding:10px 14px; font-size:.98rem; margin:10px 0 0;}
   /* ---- skladniki (chipsy) ---- */
   .selbar{position:sticky; top:calc(80px + env(safe-area-inset-top)); z-index:5;
     background:var(--paper); padding:6px 0 12px; margin-bottom:6px;}
@@ -271,12 +342,12 @@ const isSaved = (id)=> getSaved().some(r=>r.id===id);
 
 /* ---------- stan + nawigacja ---------- */
 let stack=[{view:"home"}];
-let ctx={ meal:null, selected:new Set(), excluded:new Set(), results:[], offset:0 };
+let ctx={ meal:null, selected:new Set(), excluded:new Set(), excludeMode:"filter", results:[], offset:0 };
 const main=document.getElementById("main");
 
 function go(view, opts={}){ stack.push(Object.assign({view},opts)); render(); window.scrollTo(0,0); }
 function back(){ if(stack.length>1){ stack.pop(); render(); window.scrollTo(0,0);} }
-function home(){ stack=[{view:"home"}]; ctx.selected=new Set(); ctx.excluded=new Set(); render(); window.scrollTo(0,0); }
+function home(){ stack=[{view:"home"}]; ctx.selected=new Set(); ctx.excluded=new Set(); ctx.excludeMode="filter"; render(); window.scrollTo(0,0); }
 
 function render(){
   const top=stack[stack.length-1];
@@ -336,7 +407,7 @@ function doSearch(){
 
 /* ---------- ekran skladnikow ---------- */
 function renderMeal(meal){
-  ctx.meal=meal; ctx.selected=new Set(); ctx.excluded=new Set();
+  ctx.meal=meal; ctx.selected=new Set(); ctx.excluded=new Set(); ctx.excludeMode="filter";
   const recipes=RECIPES.filter(r=>r.m.includes(meal));
   // zbierz dostepne skladniki (tagi) z przepisow tego posilku
   const tagset=new Set(); recipes.forEach(r=>r.tags.forEach(t=>tagset.add(t)));
@@ -346,6 +417,10 @@ function renderMeal(meal){
   let h='<h2 class="screen">'+mealLabel[meal]+'</h2>';
   h+='<p class="lead">Dotknij raz, aby zaznaczyć „mam w domu”. Dotknij ponownie, aby wykluczyć składnik, którego nie chcesz w przepisie. Trzeci dotyk czyści wybór. Nie musisz nic zaznaczać — wtedy pokażę propozycje dnia.</p>';
   h+='<div class="selbar"><div class="selcount" id="selcount">Mam: 0 · Bez: 0</div></div>';
+  h+='<div class="modebox"><div class="modelabel">Gdy wykluczam składnik, chcę:</div>'+
+     '<button class="mode-btn on" data-action="set-exclude-mode" data-mode="filter">Widzieć tylko przepisy, które go nie zawierają</button>'+
+     '<button class="mode-btn" data-action="set-exclude-mode" data-mode="omit">Widzieć przepis bez tego składnika (kalorie i alergeny przeliczone szacunkowo)</button>'+
+     '</div>';
   GROUP_ORDER.forEach(g=>{
     if(!grouped[g]) return;
     grouped[g].sort((a,b)=>a.localeCompare(b));
@@ -365,9 +440,9 @@ function updateSelCount(){
 }
 
 /* ---------- dopasowanie + wyniki ---------- */
-function rankRecipes(meal, selected, excluded){
+function rankRecipes(meal, selected, excluded, mode){
   let list=RECIPES.filter(r=>r.m.includes(meal));
-  if(excluded && excluded.size>0){
+  if(mode==="filter" && excluded && excluded.size>0){
     list=list.filter(r=> !r.tags.some(t=>excluded.has(t)));
   }
   if(selected.size===0){ return shuffle(list.slice()); }
@@ -378,8 +453,28 @@ function rankRecipes(meal, selected, excluded){
 }
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
+/* przepis "uboższy" o wykluczone skladniki: usuwa je z listy i przelicza
+   szacunkowo kalorie oraz alergeny; zwraca oryginal, gdy tryb to "filter"
+   albo przepis nie zawiera zadnego wykluczonego skladnika */
+function effectiveRecipe(r){
+  if(ctx.excludeMode!=="omit" || !ctx.excluded || ctx.excluded.size===0) return r;
+  const removed=r.ing.filter(e=>ctx.excluded.has(e[2]));
+  if(removed.length===0) return r;
+  const kept=r.ing.filter(e=>!ctx.excluded.has(e[2]));
+  let kcalRemoved=0, unknown=false;
+  removed.forEach(e=>{ if(e[3]!=null) kcalRemoved+=e[3]; else unknown=true; });
+  const floor=Math.max(50, Math.round(r.kcal*0.35));
+  const newKcal=Math.max(floor, r.kcal-kcalRemoved);
+  const stillAl=new Set(kept.map(e=>e[4]).filter(Boolean));
+  const newAl=r.al.filter(a=>stillAl.has(a));
+  return Object.assign({}, r, {
+    ing:kept, kcal:newKcal, al:newAl,
+    _omitted: removed.map(e=>e[0]), _approx:true, _kcalUnknown:unknown,
+  });
+}
+
 function showResults(){
-  ctx.results=rankRecipes(ctx.meal, ctx.selected, ctx.excluded);
+  ctx.results=rankRecipes(ctx.meal, ctx.selected, ctx.excluded, ctx.excludeMode);
   ctx.offset=0;
   go("results");
 }
@@ -399,16 +494,17 @@ function renderResults(){
   let h='<h2 class="screen">Wybierz przepis</h2>';
   const parts=[];
   if(ctx.selected.size>0) parts.push('Dopasowane do: '+[...ctx.selected].join(", "));
-  if(ctx.excluded.size>0) parts.push('Bez: '+[...ctx.excluded].join(", "));
+  if(ctx.excluded.size>0) parts.push((ctx.excludeMode==="omit"?'Bez (usunięte ze składu): ':'Bez: ')+[...ctx.excluded].join(", "));
   if(parts.length){
     h+='<p class="lead">'+parts.join(" · ")+'.</p>';
   }else{
     h+='<p class="lead">Trzy propozycje na '+mealLabel[ctx.meal].toLowerCase()+'.</p>';
   }
-  three.forEach(r=>{
+  three.forEach(r0=>{
+    const r=effectiveRecipe(r0);
     h+='<button class="card" data-action="open-recipe" data-id="'+r.id+'">'+
        '<h3>'+r.t+'</h3><div class="metarow">'+
-       '<span class="badge">ok. '+r.kcal+' kcal</span>'+
+       '<span class="badge">ok. '+r.kcal+' kcal'+(r._approx?" (szac.)":"")+'</span>'+
        '<span class="catbadge">'+r.c+'</span>'+ allergTiny(r) +
        '</div><div class="go">Zobacz przepis ›</div></button>';
   });
@@ -422,12 +518,16 @@ function allergTiny(r){
 
 /* ---------- szczegol przepisu ---------- */
 function renderRecipe(id){
-  const r=byId[id]; const saved=isSaved(id);
+  const r=effectiveRecipe(byId[id]); const saved=isSaved(id);
   let h='<h1 class="rtitle">'+r.t+'</h1>';
-  h+='<div class="infogrid"><span class="badge">ok. '+r.kcal+' kcal · 1 porcja</span>'+
+  h+='<div class="infogrid"><span class="badge">ok. '+r.kcal+' kcal · 1 porcja'+(r._approx?" (szac.)":"")+'</span>'+
      '<span class="catbadge">Nr '+numStr(r.num)+'</span>'+
      '<span class="catbadge">'+r.c+'</span>'+
      '<span class="catbadge">'+r.m.map(m=>mealLabel[m]).join(" · ")+'</span></div>';
+  if(r._approx){
+    h+='<div class="approx-note">Przepis bez: '+r._omitted.join(", ")+'. Kalorie i alergeny przeliczone szacunkowo'+
+       (r._kcalUnknown?" (część kalorii nieznana — wartość może być zawyżona)":"")+'.</div>';
+  }
   h+='<div class="seclabel">Alergeny</div>';
   if(r.al.length){
     h+='<div class="alerts">'+r.al.map(a=>'<span class="alert-pill">'+AL_LABEL[a]+'</span>').join("")+'</div>';
@@ -486,8 +586,12 @@ function recipeText(r){
   const L=[];
   L.push(r.t);
   L.push("Numer przepisu: "+numStr(r.num));
-  L.push("Kaloryczność: ok. "+r.kcal+" kcal (1 porcja)");
+  L.push("Kaloryczność: ok. "+r.kcal+" kcal (1 porcja)"+(r._approx?" — szacunkowo":""));
   L.push("Alergeny: "+(r.al.length? r.al.map(a=>AL_LABEL[a]).join(", "):"brak typowych"));
+  if(r._approx){
+    L.push("Uwaga: przepis bez: "+r._omitted.join(", ")+" — kalorie i alergeny przeliczone szacunkowo"+
+      (r._kcalUnknown?" (część kalorii nieznana)":"")+".");
+  }
   L.push("");
   L.push("Składniki (na 1 osobę):");
   r.ing.forEach(([n,a])=>L.push("• "+n+" — "+a));
@@ -500,7 +604,7 @@ function recipeText(r){
   return L.join("\n");
 }
 async function shareRecipe(id){
-  const r=byId[id]; const text=recipeText(r);
+  const r=effectiveRecipe(byId[id]); const text=recipeText(r);
   if(navigator.share){
     try{ await navigator.share({title:r.t, text:text}); return; }
     catch(e){ if(e && e.name==="AbortError") return; }
@@ -536,6 +640,11 @@ document.body.addEventListener("click", (e)=>{
   if(a==="go-saved") return go("saved");
   if(a==="go-search"){ ctx.searchError=null; return go("search"); }
   if(a==="do-search") return doSearch();
+  if(a==="set-exclude-mode"){
+    ctx.excludeMode=t.dataset.mode;
+    document.querySelectorAll(".mode-btn").forEach(b=>b.classList.toggle("on", b.dataset.mode===ctx.excludeMode));
+    return;
+  }
   if(a==="toggle-ing"){
     const ing=t.dataset.ing;
     if(ctx.selected.has(ing)){

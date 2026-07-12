@@ -1,4 +1,4 @@
-const CACHE="nasza-kuchnia-2b790cba5a";
+const CACHE="nasza-kuchnia-6419cfac36";
 const ASSETS=["./","./index.html","./manifest.webmanifest",
   "./icon-192.png","./icon-512.png","./icon-maskable-512.png","./apple-touch-icon.png"];
 self.addEventListener("install",e=>{

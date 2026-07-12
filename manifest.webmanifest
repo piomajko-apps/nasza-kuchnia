@@ -1,0 +1,32 @@
+{
+  "name": "Nasza Kuchnia",
+  "short_name": "Nasza Kuchnia",
+  "description": "Proste przepisy zgodne z dietą mamy karmiącej.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#FBF6F0",
+  "theme_color": "#7E463C",
+  "lang": "pl",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7E463C">
+<meta name="description" content="Nasza Kuchnia — proste przepisy zgodne z dietą mamy karmiącej. Duże przyciski, czytelne komunikaty.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Nasza Kuchnia</title>
+<style>
+  :root{
+    --paper:#FBF6F0; --surface:#FFFFFF; --border:#E7DACE; --ink:#2E2A25; --muted:#6E655C;
+    --clay:#9E5F52; --clay-dark:#7E463C; --clay-soft:#F4E6DD;
+    --green:#4F6A3F; --green-soft:#E9F1E4; --danger:#B24A2E; --focus:#1E63C4;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--paper);}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:20px; line-height:1.5; color:var(--ink);
+    -webkit-text-size-adjust:100%;
+  }
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif; line-height:1.2;}
+  .app{max-width:640px; margin:0 auto; min-height:100vh; background:var(--paper);
+       display:flex; flex-direction:column;}
+  /* ---- pasek gorny ---- */
+  .appbar{position:sticky; top:0; z-index:10; background:var(--clay-dark); color:#FBF6F0;
+    display:flex; align-items:center; gap:10px; padding:14px 14px;
+    padding-top:calc(14px + env(safe-area-inset-top)); box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  .appbar .title{font-family:Georgia,serif; font-size:1.35rem; font-weight:700; flex:1; text-align:center;}
+  .iconbtn{min-width:52px; min-height:52px; border:none; background:rgba(255,255,255,.14);
+    color:#FBF6F0; border-radius:14px; font-size:1.5rem; cursor:pointer; line-height:1;}
+  .iconbtn:active{background:rgba(255,255,255,.28);}
+  .iconbtn.ghost{background:transparent;}
+  .spacer{min-width:52px;}
+  /* ---- tresc ---- */
+  main{flex:1; padding:20px 16px calc(28px + env(safe-area-inset-bottom));}
+  .kicker{font-size:1rem; color:var(--muted); margin:0 0 4px;}
+  h1.screen{font-size:1.7rem; margin:0 0 6px;}
+  h2.screen{font-size:1.5rem; margin:0 0 14px;}
+  .lead{color:var(--muted); font-size:1.02rem; margin:0 0 18px;}
+  /* ---- duze przyciski posilkow ---- */
+  .meal-btn{display:flex; align-items:center; gap:16px; width:100%; min-height:88px;
+    background:var(--surface); border:2px solid var(--border); border-radius:var(--radius);
+    padding:16px 20px; margin-bottom:14px; font-size:1.25rem; font-weight:600; color:var(--ink);
+    cursor:pointer; text-align:left;}
+  .meal-btn .emoji{font-size:2rem; line-height:1;}
+  .meal-btn .arrow{margin-left:auto; color:var(--clay); font-size:1.6rem;}
+  .meal-btn:active{background:var(--clay-soft); border-color:var(--clay);}
+  .saved-entry{margin-top:6px;}
+  .saved-entry .meal-btn{border-style:dashed;}
+  /* ---- przyciski akcji ---- */
+  .primary-btn{display:block; width:100%; min-height:70px; background:var(--clay-dark); color:#FBF6F0;
+    border:none; border-radius:var(--radius); font-size:1.2rem; font-weight:700; cursor:pointer;
+    margin-top:8px;}
+  .primary-btn:active{background:#6a3a31;}
+  .ghost-btn{display:block; width:100%; min-height:62px; background:var(--surface);
+    border:2px solid var(--clay); color:var(--clay-dark); border-radius:var(--radius);
+    font-size:1.1rem; font-weight:700; cursor:pointer; margin-top:12px;}
+  .ghost-btn:active{background:var(--clay-soft);}
+  /* ---- skladniki (chipsy) ---- */
+  .selbar{position:sticky; top:calc(80px + env(safe-area-inset-top)); z-index:5;
+    background:var(--paper); padding:6px 0 12px; margin-bottom:6px;}
+  .selcount{font-size:1rem; color:var(--muted);}
+  .grouplabel{font-size:.95rem; font-weight:700; color:var(--clay-dark); text-transform:uppercase;
+    letter-spacing:.5px; margin:18px 0 8px;}
+  .chips{display:flex; flex-wrap:wrap; gap:10px;}
+  .chip{min-height:56px; display:inline-flex; align-items:center; gap:8px; padding:10px 18px;
+    background:var(--surface); border:2px solid var(--border); border-radius:999px;
+    font-size:1.05rem; color:var(--ink); cursor:pointer;}
+  .chip .tick{display:none; font-weight:800;}
+  .chip.on{background:var(--clay); border-color:var(--clay); color:#fff;}
+  .chip.on .tick{display:inline;}
+  /* ---- karty przepisow ---- */
+  .card{display:block; width:100%; text-align:left; background:var(--surface); border:2px solid var(--border);
+    border-radius:var(--radius); padding:18px 18px; margin-bottom:14px; cursor:pointer;}
+  .card:active{border-color:var(--clay);}
+  .card h3{font-size:1.3rem; margin:0 0 10px; color:var(--clay-dark);}
+  .metarow{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .badge{background:var(--green-soft); color:var(--green); border-radius:999px; padding:5px 14px;
+    font-size:.95rem; font-weight:700;}
+  .catbadge{background:var(--clay-soft); color:var(--clay-dark); border-radius:999px; padding:5px 14px;
+    font-size:.9rem; font-weight:700;}
+  .card .go{color:var(--clay); font-weight:700; margin-top:12px; font-size:1.05rem;}
+  /* ---- szczegol przepisu ---- */
+  .rtitle{font-size:1.6rem; margin:0 0 12px; color:var(--clay-dark);}
+  .infogrid{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:6px;}
+  .seclabel{font-size:.95rem; font-weight:700; color:var(--clay-dark); text-transform:uppercase;
+    letter-spacing:.5px; margin:22px 0 8px; border-bottom:2px solid var(--clay-soft); padding-bottom:6px;}
+  .alerts{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;}
+  .alert-pill{background:#F7ECE7; color:#9a4a2c; border:1px solid #e6c3b4; border-radius:999px;
+    padding:5px 14px; font-size:.95rem; font-weight:600;}
+  .alert-none{color:var(--green); font-weight:700;}
+  ul.ing{list-style:none; padding:0; margin:0;}
+  ul.ing li{display:flex; justify-content:space-between; gap:12px; padding:11px 2px;
+    border-bottom:1px dotted var(--border); font-size:1.08rem;}
+  ul.ing li .amt{color:var(--clay-dark); font-weight:700; white-space:nowrap;}
+  ol.steps{padding-left:26px; margin:0;}
+  ol.steps li{margin-bottom:12px; font-size:1.08rem;}
+  .actions{display:flex; flex-direction:column; gap:12px; margin-top:26px;}
+  .btn-send{min-height:72px; background:var(--clay-dark); color:#fff; border:none; border-radius:var(--radius);
+    font-size:1.25rem; font-weight:800; cursor:pointer;}
+  .btn-send:active{background:#6a3a31;}
+  .btn-save{min-height:66px; background:var(--green-soft); color:var(--green); border:2px solid #bcd6b0;
+    border-radius:var(--radius); font-size:1.15rem; font-weight:800; cursor:pointer;}
+  .btn-save.saved{background:#eef3ec;}
+  .btn-remove{min-height:60px; background:#F7ECE7; color:var(--danger); border:2px solid #e6c3b4;
+    border-radius:var(--radius); font-size:1.05rem; font-weight:700; cursor:pointer;}
+  /* ---- zapisane ---- */
+  .saved-group h2{font-size:1.25rem; color:var(--clay-dark); margin:22px 0 10px;}
+  .saved-item{display:flex; align-items:center; gap:12px; background:var(--surface);
+    border:2px solid var(--border); border-radius:14px; padding:14px 16px; margin-bottom:10px;}
+  .saved-item .name{flex:1; font-size:1.1rem; font-weight:600; cursor:pointer;}
+  .saved-item .mini{min-width:48px; min-height:48px; border-radius:12px; border:none; cursor:pointer;
+    font-size:1.2rem;}
+  .mini.open{background:var(--clay-soft); color:var(--clay-dark);}
+  .mini.del{background:#F7ECE7; color:var(--danger);}
+  .empty{text-align:center; color:var(--muted); padding:40px 10px;}
+  .empty .big{font-size:3rem; display:block; margin-bottom:10px;}
+  /* ---- toast + modal ---- */
+  .toast{position:fixed; left:50%; bottom:calc(24px + env(safe-area-inset-bottom));
+    transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff;
+    padding:16px 22px; border-radius:14px; font-size:1.05rem; font-weight:600; max-width:90%;
+    text-align:center; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:50;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center;
+    justify-content:center; padding:20px; z-index:60;}
+  .modal .box{background:var(--surface); border-radius:18px; padding:20px; max-width:520px; width:100%;}
+  .modal h3{margin:0 0 12px; color:var(--clay-dark);}
+  .modal textarea{width:100%; height:220px; font-size:1rem; padding:12px; border:2px solid var(--border);
+    border-radius:12px; resize:none;}
+  /* ---- focus ---- */
+  button:focus-visible, .card:focus-visible{outline:3px solid var(--focus); outline-offset:2px;}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important;} }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="appbar">
+    <button class="iconbtn ghost" id="backBtn" data-action="back" aria-label="Wstecz" style="visibility:hidden">‹</button>
+    <div class="title" id="barTitle">Nasza Kuchnia</div>
+    <button class="iconbtn" id="homeBtn" data-action="home" aria-label="Ekran główny">⌂</button>
+  </header>
+  <main id="main" aria-live="polite"></main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const APP_DATA = {"recipes": [{"id": "r001", "t": "Owsianka na mleku z gruszką", "m": ["s1", "s2"], "c": "Śniadania", "al": ["gluten", "mleko", "orzechy"], "kcal": 480, "ing": [["płatki owsiane", "60 g"], ["mleko", "250 ml"], ["gruszka", "150 g"], ["masło migdałowe", "10 g"], ["cynamon", "szczypta"]], "steps": ["Płatki zalej mlekiem, gotuj na małym ogniu 5–7 min, mieszając.", "Dodaj startą lub pieczoną gruszkę, masło migdałowe i cynamon."], "tags": ["płatki owsiane", "mleko", "gruszka", "masło migdałowe"]}, {"id": "r002", "t": "Owsianka na mleku z bananem", "m": ["s1", "s2"], "c": "Śniadania", "al": ["gluten", "mleko", "orzechy"], "kcal": 470, "ing": [["płatki owsiane", "60 g"], ["mleko", "250 ml"], ["banan", "120 g"], ["masło migdałowe", "10 g"]], "steps": ["Płatki zalej mlekiem, gotuj 5–7 min do kremowej konsystencji.", "Dodaj pokrojonego banana i masło migdałowe."], "tags": ["płatki owsiane", "mleko", "banan", "masło migdałowe"]}, {"id": "r003", "t": "Owsianka na mleku z borówkami", "m": ["s1", "s2"], "c": "Śniadania", "al": ["gluten", "mleko"], "kcal": 460, "ing": [["płatki owsiane", "60 g"], ["mleko", "250 ml"], ["borówki", "80 g"], ["miód", "1 łyżeczka"]], "steps": ["Ugotuj płatki na mleku (5–7 min).", "Wyłóż borówki i skrop odrobiną miodu."], "tags": ["płatki owsiane", "mleko", "borówki"]}, {"id": "r004", "t": "Owsianka z pieczonym jabłkiem i cynamonem", "m": ["s1"], "c": "Śniadania", "al": ["gluten", "mleko"], "kcal": 470, "ing": [["płatki owsiane", "60 g"], ["mleko", "250 ml"], ["jabłko", "150 g"], ["cynamon", "1/2 łyżeczki"]], "steps": ["Jabłko pokrój, uduś z cynamonem na patelni z odrobiną wody (6–8 min).", "Ugotuj płatki na mleku i połącz z jabłkiem."], "tags": ["płatki owsiane", "mleko", "jabłko"]}, {"id": "r005", "t": "Jaglanka na mleku z jabłkiem", "m": ["s1"], "c": "Śniadania", "al": ["mleko"], "kcal": 490, "ing": [["kasza jaglana", "60 g"], ["mleko", "250 ml"], ["jabłko", "150 g"], ["cynamon", "szczypta"]], "steps": ["Kaszę przepłucz gorącą wodą, ugotuj na mleku (15 min pod przykryciem).", "Dodaj duszone z cynamonem jabłko."], "tags": ["kasza jaglana", "mleko", "jabłko"]}, {"id": "r006", "t": "Jaglanka z gruszką i borówkami", "m": ["s1"], "c": "Śniadania", "al": ["mleko"], "kcal": 500, "ing": [["kasza jaglana", "60 g"], ["mleko", "250 ml"], ["gruszka", "120 g"], ["borówki", "60 g"]], "steps": ["Ugotuj jaglankę na mleku (15 min).", "Wyłóż pokrojoną gruszkę i borówki."], "tags": ["kasza jaglana", "mleko", "gruszka", "borówki"]}, {"id": "r007", "t": "Kasza manna na mleku z borówkami", "m": ["s1"], "c": "Śniadania", "al": ["gluten", "mleko"], "kcal": 430, "ing": [["kasza manna", "50 g"], ["mleko", "300 ml"], ["borówki", "70 g"]], "steps": ["Zagotuj mleko, wsyp mannę cienkim strumieniem, mieszaj 2–3 min.", "Wyłóż borówki na wierzch."], "tags": ["kasza manna", "mleko", "borówki"]}, {"id": "r008", "t": "Ryż na mleku z jabłkiem i cynamonem", "m": ["s1"], "c": "Śniadania", "al": ["mleko"], "kcal": 470, "ing": [["ryż", "60 g"], ["mleko", "300 ml"], ["jabłko", "150 g"], ["cynamon", "1/2 łyżeczki"]], "steps": ["Ryż ugotuj na mleku na małym ogniu (ok. 20 min).", "Dodaj starte jabłko i cynamon."], "tags": ["ryż", "mleko", "jabłko"]}, {"id": "r009", "t": "Jajecznica na maśle z koperkiem", "m": ["s1"], "c": "Śniadania", "al": ["jaja", "mleko", "gluten"], "kcal": 400, "ing": [["jajka", "3 szt."], ["masło", "10 g"], ["koperek", "1 łyżka"], ["pieczywo orkiszowe", "2 kromki"]], "steps": ["Rozpuść masło na małym ogniu, wbij jajka, mieszaj do ścięcia (2–3 min).", "Posyp koperkiem, podawaj z pieczywem."], "tags": ["jajka", "pieczywo orkiszowe"]}, {"id": "r010", "t": "Jajka na miękko z pieczywem", "m": ["s1"], "c": "Śniadania", "al": ["jaja", "gluten", "mleko"], "kcal": 340, "ing": [["jajka", "2 szt."], ["pieczywo orkiszowe", "2 kromki"], ["masło", "10 g"]], "steps": ["Gotuj jajka we wrzątku 4 min.", "Podawaj z pieczywem posmarowanym masłem."], "tags": ["jajka", "pieczywo orkiszowe"]}, {"id": "r011", "t": "Omlet z cukinią", "m": ["s1"], "c": "Śniadania", "al": ["jaja", "mleko"], "kcal": 360, "ing": [["jajka", "3 szt."], ["cukinia", "100 g"], ["masło", "10 g"]], "steps": ["Cukinię zetrzyj, podsmaż chwilę na maśle.", "Zalej roztrzepanymi jajkami, smaż pod przykryciem 4–5 min."], "tags": ["jajka", "cukinia"]}, {"id": "r012", "t": "Omlet na słodko z jabłkiem", "m": ["s1"], "c": "Śniadania", "al": ["jaja", "mleko"], "kcal": 380, "ing": [["jajka", "3 szt."], ["jabłko", "120 g"], ["mleko", "30 ml"], ["masło", "10 g"]], "steps": ["Jabłko uduś na maśle.", "Roztrzep jajka z mlekiem, wlej na patelnię, smaż i przełóż jabłkiem."], "tags": ["jajka", "jabłko", "mleko"]}, {"id": "r013", "t": "Twarożek z koperkiem i pieczywem", "m": ["s1", "s2"], "c": "Nabiał", "al": ["mleko", "gluten"], "kcal": 350, "ing": [["twaróg półtłusty", "150 g"], ["jogurt naturalny", "2 łyżki"], ["koperek", "1 łyżka"], ["ogórek", "60 g"], ["pieczywo orkiszowe", "2 kromki"]], "steps": ["Twaróg rozgnieć z jogurtem i koperkiem.", "Podawaj z pieczywem i plasterkami ogórka."], "tags": ["twaróg półtłusty", "jogurt naturalny", "ogórek", "pieczywo orkiszowe"]}, {"id": "r014", "t": "Placuszki owsiane na maślance z jabłkiem", "m": ["s1"], "c": "Śniadania", "al": ["gluten", "mleko", "jaja"], "kcal": 520, "ing": [["płatki owsiane", "60 g"], ["maślanka", "100 ml"], ["jajko", "1 szt."], ["jabłko", "120 g"], ["masło", "10 g"]], "steps": ["Wymieszaj płatki, maślankę, jajko i starte jabłko, odstaw 10 min.", "Smaż małe placuszki na maśle po 2–3 min z każdej strony."], "tags": ["płatki owsiane", "maślanka", "jajka", "jabłko"]}, {"id": "r015", "t": "Kasza jaglana zapiekana z gruszką", "m": ["s1"], "c": "Śniadania", "al": ["mleko"], "kcal": 480, "ing": [["kasza jaglana", "60 g"], ["mleko", "250 ml"], ["gruszka", "150 g"]], "steps": ["Ugotuj jaglankę na mleku.", "Przełóż do naczynia z gruszką i zapiecz 12 min w 180°C."], "tags": ["kasza jaglana", "mleko", "gruszka"]}, {"id": "r016", "t": "Owsianka z brzoskwinią", "m": ["s1", "s2"], "c": "Śniadania", "al": ["gluten", "mleko"], "kcal": 460, "ing": [["płatki owsiane", "60 g"], ["mleko", "250 ml"], ["brzoskwinia", "120 g"]], "steps": ["Ugotuj płatki na mleku.", "Dodaj pokrojoną brzoskwinię."], "tags": ["płatki owsiane", "mleko", "brzoskwinia"]}, {"id": "r017", "t": "Budyń jaglany waniliowy z borówkami", "m": ["s1", "pw"], "c": "Śniadania", "al": ["mleko"], "kcal": 420, "ing": [["kasza jaglana", "60 g"], ["mleko", "250 ml"], ["wanilia", "szczypta"], ["borówki", "60 g"]], "steps": ["Ugotuj jaglankę na mleku z wanilią, zblenduj na gładko.", "Wyłóż borówki, podawaj ciepłe lub schłodzone."], "tags": ["kasza jaglana", "mleko", "borówki"]}, {"id": "r018", "t": "Grzanki z twarożkiem i borówkami", "m": ["s1", "s2"], "c": "Nabiał", "al": ["gluten", "mleko"], "kcal": 360, "ing": [["pieczywo orkiszowe", "2 kromki"], ["twaróg półtłusty", "120 g"], ["borówki", "50 g"]], "steps": ["Pieczywo podpiecz na złoto.", "Posmaruj twarogiem i wyłóż borówki."], "tags": ["pieczywo orkiszowe", "twaróg półtłusty", "borówki"]}, {"id": "r019", "t": "Kanapki z serem żółtym łagodnym", "m": ["s1", "s2"], "c": "Kanapki", "al": ["gluten", "mleko"], "kcal": 400, "ing": [["pieczywo orkiszowe", "2 kromki"], ["ser żółty łagodny", "60 g"], ["ogórek", "60 g"], ["masło", "5 g"]], "steps": ["Pieczywo posmaruj masłem.", "Ułóż ser i plasterki ogórka."], "tags": ["pieczywo orkiszowe", "ser żółty łagodny", "ogórek"]}, {"id": "r020", "t": "Ryżanka z jabłkiem", "m": ["s1", "s2"], "c": "Śniadania", "al": ["mleko"], "kcal": 400, "ing": [["ryż", "50 g"], ["mleko", "300 ml"], ["jabłko", "120 g"], ["cynamon", "szczypta"]], "steps": ["Ugotuj ryż na mleku.", "Dodaj starte jabłko i cynamon."], "tags": ["ryż", "mleko", "jabłko"]}, {"id": "r021", "t": "Jogurt naturalny z borówkami i owsem", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko", "gluten"], "kcal": 260, "ing": [["jogurt naturalny", "200 g"], ["borówki", "70 g"], ["płatki owsiane", "20 g"]], "steps": ["Jogurt przełóż do miski.", "Dodaj borówki i płatki owsiane."], "tags": ["jogurt naturalny", "borówki", "płatki owsiane"]}, {"id": "r022", "t": "Jogurt z bananem i owsem", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko", "gluten"], "kcal": 280, "ing": [["jogurt naturalny", "200 g"], ["banan", "100 g"], ["płatki owsiane", "20 g"]], "steps": ["Jogurt wymieszaj z pokrojonym bananem.", "Posyp płatkami owsianymi."], "tags": ["jogurt naturalny", "banan", "płatki owsiane"]}, {"id": "r023", "t": "Kefir z bananem", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 230, "ing": [["kefir", "250 ml"], ["banan", "100 g"]], "steps": ["Kefir zblenduj z bananem lub podawaj z pokrojonym bananem obok."], "tags": ["kefir", "banan"]}, {"id": "r024", "t": "Maślanka z gruszką", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 220, "ing": [["maślanka", "250 ml"], ["gruszka", "120 g"]], "steps": ["Podawaj maślankę z pokrojoną gruszką lub zblenduj razem."], "tags": ["maślanka", "gruszka"]}, {"id": "r025", "t": "Serek wiejski z ogórkiem", "m": ["s2"], "c": "Nabiał", "al": ["mleko"], "kcal": 240, "ing": [["serek wiejski", "150 g"], ["ogórek", "70 g"], ["koperek", "1 łyżka"]], "steps": ["Serek wymieszaj z koperkiem.", "Dodaj pokrojony ogórek."], "tags": ["serek wiejski", "ogórek"]}, {"id": "r026", "t": "Twarożek na słodko z bananem", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 320, "ing": [["twaróg półtłusty", "150 g"], ["jogurt naturalny", "2 łyżki"], ["banan", "100 g"]], "steps": ["Twaróg rozgnieć z jogurtem.", "Dodaj pokrojonego banana."], "tags": ["twaróg półtłusty", "jogurt naturalny", "banan"]}, {"id": "r027", "t": "Kanapki z pastą jajeczną", "m": ["s2"], "c": "Kanapki", "al": ["gluten", "jaja", "mleko"], "kcal": 420, "ing": [["pieczywo orkiszowe", "2 kromki"], ["jajka", "2 szt."], ["jogurt naturalny", "1 łyżka"], ["koperek", "1 łyżka"]], "steps": ["Jajka ugotuj na twardo, posiekaj i wymieszaj z jogurtem i koperkiem.", "Nałóż pastę na pieczywo."], "tags": ["pieczywo orkiszowe", "jajka", "jogurt naturalny"]}, {"id": "r028", "t": "Kanapki z pastą z pieczonego indyka", "m": ["s2"], "c": "Kanapki", "al": ["gluten", "mleko"], "kcal": 430, "ing": [["pieczywo orkiszowe", "2 kromki"], ["indyk", "80 g"], ["jogurt naturalny", "1 łyżka"], ["ogórek", "50 g"]], "steps": ["Pieczonego indyka drobno posiekaj i wymieszaj z jogurtem.", "Nałóż na pieczywo, dodaj ogórek."], "tags": ["pieczywo orkiszowe", "indyk", "jogurt naturalny", "ogórek"]}, {"id": "r029", "t": "Kanapki z twarogiem i borówkami", "m": ["s2"], "c": "Kanapki", "al": ["gluten", "mleko"], "kcal": 380, "ing": [["pieczywo orkiszowe", "2 kromki"], ["twaróg półtłusty", "120 g"], ["borówki", "50 g"]], "steps": ["Posmaruj pieczywo twarogiem.", "Wyłóż borówki."], "tags": ["pieczywo orkiszowe", "twaróg półtłusty", "borówki"]}, {"id": "r030", "t": "Sałatka owocowa z jogurtem", "m": ["s2", "pw"], "c": "Owoce i desery", "al": ["mleko"], "kcal": 260, "ing": [["jabłko", "80 g"], ["gruszka", "80 g"], ["banan", "80 g"], ["jogurt naturalny", "100 g"]], "steps": ["Owoce pokrój w kostkę.", "Zalej jogurtem i wymieszaj."], "tags": ["jabłko", "gruszka", "banan", "jogurt naturalny"]}, {"id": "r031", "t": "Koktajl bananowy na kefirze", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 250, "ing": [["kefir", "250 ml"], ["banan", "120 g"]], "steps": ["Zblenduj kefir z bananem na gładki koktajl."], "tags": ["kefir", "banan"]}, {"id": "r032", "t": "Koktajl jagodowy na jogurcie", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 240, "ing": [["jogurt naturalny", "200 g"], ["borówki", "80 g"], ["banan", "80 g"]], "steps": ["Zblenduj jogurt z borówkami i bananem."], "tags": ["jogurt naturalny", "borówki", "banan"]}, {"id": "r033", "t": "Placki z cukinii pieczone", "m": ["s2"], "c": "Śniadania", "al": ["jaja", "gluten", "mleko"], "kcal": 360, "ing": [["cukinia", "150 g"], ["jajko", "1 szt."], ["mąka orkiszowa", "3 łyżki"], ["ser żółty łagodny", "30 g"]], "steps": ["Cukinię zetrzyj, odciśnij, wymieszaj z jajkiem, mąką i serem.", "Piecz placki w 190°C ok. 15 min."], "tags": ["cukinia", "jajka", "ser żółty łagodny"]}, {"id": "r034", "t": "Racuchy z jabłkiem na jogurcie", "m": ["s2"], "c": "Śniadania", "al": ["gluten", "mleko", "jaja"], "kcal": 480, "ing": [["mąka orkiszowa", "80 g"], ["jogurt naturalny", "100 g"], ["jajko", "1 szt."], ["jabłko", "120 g"], ["masło", "10 g"]], "steps": ["Wymieszaj mąkę, jogurt, jajko i starte jabłko.", "Smaż racuchy na maśle po 2–3 min z każdej strony."], "tags": ["jogurt naturalny", "jajka", "jabłko"]}, {"id": "r035", "t": "Jogurt z pieczonym jabłkiem i cynamonem", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 250, "ing": [["jogurt naturalny", "200 g"], ["jabłko", "120 g"], ["cynamon", "szczypta"]], "steps": ["Jabłko upiecz z cynamonem.", "Dodaj do jogurtu."], "tags": ["jogurt naturalny", "jabłko"]}, {"id": "r036", "t": "Muffiny owsiano-bananowe", "m": ["s2", "pw"], "c": "Śniadania", "al": ["gluten", "mleko", "jaja"], "kcal": 300, "ing": [["płatki owsiane", "60 g"], ["banan", "100 g"], ["jajko", "1 szt."], ["jogurt naturalny", "50 g"]], "steps": ["Zmiksuj płatki, banana, jajko i jogurt.", "Piecz w foremkach 20 min w 180°C."], "tags": ["płatki owsiane", "banan", "jajka", "jogurt naturalny"]}, {"id": "r037", "t": "Kanapki z pieczonym indykiem i sałatą", "m": ["s1", "s2", "ko"], "c": "Kanapki", "al": ["gluten"], "kcal": 420, "ing": [["pieczywo orkiszowe", "2 kromki"], ["indyk", "80 g"], ["sałata", "20 g"], ["ogórek", "50 g"]], "steps": ["Upiecz pierś indyka i pokrój w plastry.", "Złóż kanapki z sałatą, indykiem i ogórkiem."], "tags": ["pieczywo orkiszowe", "indyk", "sałata", "ogórek"]}, {"id": "r038", "t": "Twaróg z brzoskwinią", "m": ["s2", "pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 300, "ing": [["twaróg półtłusty", "150 g"], ["jogurt naturalny", "2 łyżki"], ["brzoskwinia", "120 g"]], "steps": ["Twaróg rozgnieć z jogurtem.", "Dodaj pokrojoną brzoskwinię."], "tags": ["twaróg półtłusty", "jogurt naturalny", "brzoskwinia"]}, {"id": "r039", "t": "Grzanki z serem i pieczoną cukinią", "m": ["s2"], "c": "Kanapki", "al": ["gluten", "mleko"], "kcal": 390, "ing": [["pieczywo orkiszowe", "2 kromki"], ["ser żółty łagodny", "50 g"], ["cukinia", "80 g"]], "steps": ["Cukinię podpiecz na patelni.", "Ułóż na pieczywie z serem i zapiecz 5 min."], "tags": ["pieczywo orkiszowe", "ser żółty łagodny", "cukinia"]}, {"id": "r040", "t": "Pieczona pierś z indyka z ziemniakami", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 560, "ing": [["indyk", "180 g"], ["ziemniaki", "250 g"], ["marchew", "100 g"], ["oliwa", "1 łyżka"], ["majeranek", "szczypta"]], "steps": ["Pierś natrzyj oliwą, solą i majerankiem.", "Piecz z ziemniakami i marchewką 30 min w 190°C."], "tags": ["indyk", "ziemniaki", "marchew"]}, {"id": "r041", "t": "Indyk duszony w sosie koperkowym z ryżem", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 580, "ing": [["indyk", "180 g"], ["ryż", "60 g"], ["jogurt naturalny", "2 łyżki"], ["koperek", "1 łyżka"]], "steps": ["Indyka pokrój, obsmaż i duś z wodą 15 min.", "Wmieszaj jogurt i koperek, podawaj z ryżem."], "tags": ["indyk", "ryż", "jogurt naturalny"]}, {"id": "r042", "t": "Pulpeciki z indyka w sosie własnym", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 560, "ing": [["indyk mielony", "150 g"], ["ryż", "40 g"], ["marchew", "80 g"], ["koperek", "1 łyżka"]], "steps": ["Mięso wymieszaj z ugotowanym ryżem i startą marchwią, uformuj pulpeciki.", "Duś w wodzie 15 min, posyp koperkiem."], "tags": ["indyk", "ryż", "marchew"]}, {"id": "r043", "t": "Kotleciki mielone z indyka z puree", "m": ["ob"], "c": "Mięso", "al": ["gluten", "mleko", "jaja"], "kcal": 620, "ing": [["indyk mielony", "150 g"], ["bułka tarta", "2 łyżki"], ["jajko", "1 szt."], ["ziemniaki", "250 g"], ["mleko", "40 ml"], ["masło", "10 g"]], "steps": ["Z mięsa, bułki i jajka uformuj kotleciki, usmaż lub upiecz.", "Ziemniaki ugnieć z mlekiem i masłem na puree."], "tags": ["indyk", "jajka", "ziemniaki", "mleko"]}, {"id": "r044", "t": "Gulasz z indyka z cukinią i kaszą gryczaną", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 590, "ing": [["indyk", "160 g"], ["cukinia", "100 g"], ["marchew", "80 g"], ["kasza gryczana", "60 g"]], "steps": ["Indyka obsmaż, duś 20 min, dodaj cukinię i marchew, duś 10 min.", "Podawaj z ugotowaną kaszą gryczaną."], "tags": ["indyk", "cukinia", "marchew", "kasza gryczana"]}, {"id": "r045", "t": "Cielęcina duszona z marchewką i puree", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 620, "ing": [["cielęcina", "180 g"], ["marchew", "100 g"], ["ziemniaki", "250 g"], ["mleko", "40 ml"], ["masło", "10 g"]], "steps": ["Cielęcinę obsmaż i duś 35 min, dodaj marchew, duś 10 min.", "Ziemniaki ugnieć z mlekiem i masłem."], "tags": ["cielęcina", "marchew", "ziemniaki", "mleko"]}, {"id": "r046", "t": "Gulasz z cielęciny z kaszą gryczaną", "m": ["ob"], "c": "Mięso", "al": ["gluten"], "kcal": 640, "ing": [["cielęcina", "180 g"], ["marchew", "80 g"], ["pietruszka", "50 g"], ["kasza gryczana", "60 g"], ["mąka orkiszowa", "1 łyżeczka"]], "steps": ["Mięso obsmaż, duś 40 min, dodaj warzywa, duś 15 min.", "Sos zagęść mąką, podawaj z kaszą."], "tags": ["cielęcina", "marchew", "pietruszka", "kasza gryczana"]}, {"id": "r047", "t": "Pulpety cielęce w sosie koperkowym", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 600, "ing": [["cielęcina mielona", "150 g"], ["ryż", "40 g"], ["jogurt naturalny", "2 łyżki"], ["koperek", "1 łyżka"], ["ziemniaki", "200 g"]], "steps": ["Z mięsa i ryżu uformuj pulpety, duś 15 min.", "Wmieszaj jogurt i koperek, podawaj z ziemniakami."], "tags": ["cielęcina", "ryż", "jogurt naturalny", "ziemniaki"]}, {"id": "r048", "t": "Sznycel cielęcy z ziemniakami i buraczkami", "m": ["ob"], "c": "Mięso", "al": ["gluten", "jaja"], "kcal": 650, "ing": [["cielęcina", "150 g"], ["jajko", "1 szt."], ["bułka tarta", "3 łyżki"], ["ziemniaki", "250 g"], ["buraki", "100 g"]], "steps": ["Cielęcinę rozbij, panieruj w jajku i bułce, usmaż na złoto.", "Podawaj z ziemniakami i tartymi buraczkami."], "tags": ["cielęcina", "jajka", "ziemniaki", "buraki"]}, {"id": "r049", "t": "Duszony królik w sosie własnym z kaszą", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 600, "ing": [["królik", "180 g"], ["marchew", "80 g"], ["pietruszka", "50 g"], ["kasza gryczana", "60 g"], ["liść laurowy", "1 szt."]], "steps": ["Królika obsmaż, duś 45 min z liściem laurowym.", "Dodaj warzywa, duś 15 min, podawaj z kaszą."], "tags": ["królik", "marchew", "pietruszka", "kasza gryczana"]}, {"id": "r050", "t": "Królik pieczony z ziemniakami i marchewką", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 640, "ing": [["królik", "180 g"], ["ziemniaki", "250 g"], ["marchew", "100 g"], ["masło", "10 g"], ["tymianek", "szczypta"]], "steps": ["Króliki natrzyj masłem i tymiankiem, ułóż z warzywami.", "Piecz pod przykryciem 40 min, potem 15 min bez."], "tags": ["królik", "ziemniaki", "marchew"]}, {"id": "r051", "t": "Królik duszony w warzywach z ryżem", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 610, "ing": [["królik", "180 g"], ["marchew", "80 g"], ["cukinia", "80 g"], ["ryż", "60 g"]], "steps": ["Królika obsmaż, duś 45 min.", "Dodaj marchew i cukinię, duś 15 min, podawaj z ryżem."], "tags": ["królik", "marchew", "cukinia", "ryż"]}, {"id": "r052", "t": "Pieczony kurczak z ziemniakami", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 600, "ing": [["kurczak", "200 g"], ["ziemniaki", "250 g"], ["marchew", "80 g"], ["oliwa", "1 łyżka"], ["majeranek", "szczypta"]], "steps": ["Kurczaka natrzyj oliwą i majerankiem.", "Piecz z ziemniakami i marchewką 40 min w 190°C."], "tags": ["kurczak", "ziemniaki", "marchew"]}, {"id": "r053", "t": "Rosół z kurczaka z makaronem", "m": ["ob"], "c": "Zupy", "al": ["gluten"], "kcal": 380, "ing": [["kurczak", "150 g"], ["marchew", "80 g"], ["pietruszka", "50 g"], ["makaron", "50 g"], ["lubczyk", "szczypta"]], "steps": ["Kurczaka i warzywa gotuj 40 min (bez cebuli), dopraw lubczykiem.", "Podawaj z ugotowanym makaronem."], "tags": ["kurczak", "marchew", "pietruszka", "makaron"]}, {"id": "r054", "t": "Kurczak duszony w sosie z marchewką i ryżem", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 560, "ing": [["kurczak", "180 g"], ["marchew", "100 g"], ["ryż", "60 g"], ["jogurt naturalny", "2 łyżki"]], "steps": ["Kurczaka obsmaż, duś z marchewką 20 min.", "Wmieszaj jogurt, podawaj z ryżem."], "tags": ["kurczak", "marchew", "ryż", "jogurt naturalny"]}, {"id": "r055", "t": "Klopsiki z kurczaka w sosie koperkowym", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 560, "ing": [["kurczak mielony", "150 g"], ["kasza jaglana", "50 g"], ["jogurt naturalny", "2 łyżki"], ["koperek", "1 łyżka"]], "steps": ["Z mięsa uformuj klopsiki, duś 15 min.", "Dodaj jogurt i koperek, podawaj z kaszą jaglaną."], "tags": ["kurczak", "kasza jaglana", "jogurt naturalny"]}, {"id": "r056", "t": "Gulasz z chudej wołowiny z kaszą", "m": ["ob"], "c": "Mięso", "al": ["gluten"], "kcal": 650, "ing": [["chuda wołowina", "180 g"], ["marchew", "80 g"], ["pietruszka", "50 g"], ["kasza gryczana", "60 g"], ["mąka orkiszowa", "1 łyżeczka"]], "steps": ["Wołowinę obsmaż, duś 40 min, dodaj warzywa, duś 15 min.", "Sos zagęść mąką, podawaj z kaszą."], "tags": ["chuda wołowina", "marchew", "pietruszka", "kasza gryczana"]}, {"id": "r057", "t": "Duszona wołowina z puree i buraczkami", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 660, "ing": [["chuda wołowina", "180 g"], ["ziemniaki", "250 g"], ["mleko", "40 ml"], ["masło", "10 g"], ["buraki", "100 g"]], "steps": ["Wołowinę duś do miękkości (ok. 50 min).", "Podawaj z puree i tartymi buraczkami."], "tags": ["chuda wołowina", "ziemniaki", "mleko", "buraki"]}, {"id": "r058", "t": "Pieczony łosoś z batatami i cukinią", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby"], "kcal": 660, "ing": [["łosoś", "180 g"], ["batat", "200 g"], ["cukinia", "100 g"], ["oliwa", "1 łyżka"], ["koperek", "1 łyżka"]], "steps": ["Batata i cukinię piecz 10 min, dołóż łososia.", "Piecz razem 15 min w 190°C, posyp koperkiem."], "tags": ["łosoś", "batat", "cukinia"]}, {"id": "r059", "t": "Dorsz pieczony z ziemniakami i marchewką", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby"], "kcal": 520, "ing": [["dorsz", "200 g"], ["ziemniaki", "250 g"], ["marchew", "80 g"], ["oliwa", "1 łyżka"]], "steps": ["Dorsza skrop oliwą i posól.", "Piecz z ziemniakami i marchewką 20 min w 190°C."], "tags": ["dorsz", "ziemniaki", "marchew"]}, {"id": "r060", "t": "Dorsz duszony z warzywami i ryżem", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby", "mleko"], "kcal": 560, "ing": [["dorsz", "200 g"], ["marchew", "80 g"], ["cukinia", "80 g"], ["ryż", "60 g"], ["masło", "10 g"]], "steps": ["Warzywa duś na maśle 8 min.", "Ułóż dorsza, duś 8–10 min, podawaj z ryżem."], "tags": ["dorsz", "marchew", "cukinia", "ryż"]}, {"id": "r061", "t": "Pstrąg pieczony z ziemniakami i koperkiem", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby"], "kcal": 600, "ing": [["pstrąg", "180 g"], ["ziemniaki", "250 g"], ["koperek", "1 łyżka"], ["oliwa", "1 łyżka"]], "steps": ["Ziemniaki podgotuj, ułóż z pstrągiem na blaszce.", "Skrop oliwą, posyp koperkiem, piecz 20 min w 190°C."], "tags": ["pstrąg", "ziemniaki"]}, {"id": "r062", "t": "Sandacz pieczony z puree i cukinią", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby", "mleko"], "kcal": 580, "ing": [["sandacz", "180 g"], ["ziemniaki", "250 g"], ["mleko", "40 ml"], ["masło", "10 g"], ["cukinia", "80 g"]], "steps": ["Sandacza i cukinię upiecz 15 min w 190°C.", "Ziemniaki ugnieć z mlekiem i masłem."], "tags": ["sandacz", "ziemniaki", "mleko", "cukinia"]}, {"id": "r063", "t": "Mintaj duszony w warzywach z ryżem", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby"], "kcal": 500, "ing": [["mintaj", "200 g"], ["marchew", "80 g"], ["cukinia", "80 g"], ["ryż", "60 g"]], "steps": ["Warzywa duś 8 min, ułóż mintaja, duś 8 min.", "Podawaj z ryżem."], "tags": ["mintaj", "marchew", "cukinia", "ryż"]}, {"id": "r064", "t": "Morszczuk pieczony z batatami", "m": ["ob", "ko"], "c": "Ryby", "al": ["ryby"], "kcal": 540, "ing": [["morszczuk", "200 g"], ["batat", "200 g"], ["cukinia", "80 g"], ["oliwa", "1 łyżka"]], "steps": ["Batata piecz 10 min, dołóż morszczuka i cukinię.", "Piecz razem 15 min w 190°C."], "tags": ["morszczuk", "batat", "cukinia"]}, {"id": "r065", "t": "Risotto z indykiem i cukinią", "m": ["ob", "ko"], "c": "Mięso", "al": ["mleko"], "kcal": 630, "ing": [["indyk", "150 g"], ["ryż", "80 g"], ["cukinia", "100 g"], ["marchew", "60 g"], ["masło", "10 g"], ["ser żółty łagodny", "20 g"]], "steps": ["Indyka obsmaż, odłóż. Podsmaż warzywa, dodaj ryż.", "Wlewaj bulion po chochelce (18 min), dodaj mięso, masło i ser."], "tags": ["indyk", "ryż", "cukinia", "marchew", "ser żółty łagodny"]}, {"id": "r066", "t": "Risotto z cielęciną i marchewką", "m": ["ob", "ko"], "c": "Mięso", "al": ["mleko"], "kcal": 640, "ing": [["cielęcina", "150 g"], ["ryż", "80 g"], ["marchew", "80 g"], ["masło", "10 g"], ["ser żółty łagodny", "20 g"]], "steps": ["Cielęcinę obsmaż, odłóż. Podsmaż marchew, dodaj ryż.", "Dolewaj bulion (18 min), na końcu mięso, masło i ser."], "tags": ["cielęcina", "ryż", "marchew", "ser żółty łagodny"]}, {"id": "r067", "t": "Zapiekana cukinia z indykiem i ziemniakami", "m": ["ob"], "c": "Mięso", "al": ["mleko"], "kcal": 600, "ing": [["indyk", "150 g"], ["cukinia", "150 g"], ["ziemniaki", "200 g"], ["ser żółty łagodny", "30 g"]], "steps": ["Warstwowo ułóż plastry ziemniaka, cukinii i indyka.", "Posyp serem, zapiekaj 35 min w 190°C."], "tags": ["indyk", "cukinia", "ziemniaki", "ser żółty łagodny"]}, {"id": "r068", "t": "Kasza gryczana z marchewką i kurczakiem", "m": ["ob"], "c": "Kasze i dodatki", "al": [], "kcal": 560, "ing": [["kurczak", "150 g"], ["kasza gryczana", "70 g"], ["marchew", "100 g"], ["oliwa", "1 łyżka"]], "steps": ["Kurczaka pokrój i obsmaż, dodaj marchew, duś 12 min.", "Podawaj z ugotowaną kaszą gryczaną."], "tags": ["kurczak", "kasza gryczana", "marchew"]}, {"id": "r069", "t": "Leniwe pierogi z twarogu", "m": ["ob"], "c": "Nabiał", "al": ["mleko", "jaja", "gluten"], "kcal": 520, "ing": [["twaróg półtłusty", "150 g"], ["jajko", "1 szt."], ["mąka orkiszowa", "60 g"], ["masło", "10 g"]], "steps": ["Twaróg zmiel, wymieszaj z jajkiem i mąką, uformuj wałek, pokrój.", "Gotuj 3 min, polej roztopionym masłem."], "tags": ["twaróg półtłusty", "jajka"]}, {"id": "r070", "t": "Makaron z kurczakiem i cukinią", "m": ["ob"], "c": "Mięso", "al": ["gluten", "mleko"], "kcal": 620, "ing": [["makaron", "70 g"], ["kurczak", "150 g"], ["cukinia", "100 g"], ["jogurt naturalny", "2 łyżki"]], "steps": ["Kurczaka i cukinię podsmaż, wmieszaj jogurt.", "Połącz z ugotowanym makaronem."], "tags": ["makaron", "kurczak", "cukinia", "jogurt naturalny"]}, {"id": "r071", "t": "Pieczony indyk z batatami i szpinakiem", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 580, "ing": [["indyk", "180 g"], ["batat", "200 g"], ["szpinak", "80 g"], ["oliwa", "1 łyżka"]], "steps": ["Indyka i batata piecz 30 min w 190°C.", "Szpinak podduś na oliwie i podawaj obok."], "tags": ["indyk", "batat", "szpinak"]}, {"id": "r072", "t": "Pulpety z indyka z marchewką i ryżem", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 580, "ing": [["indyk mielony", "150 g"], ["ryż", "60 g"], ["marchew", "100 g"]], "steps": ["Z mięsa i części ryżu uformuj pulpety, duś 15 min z marchewką.", "Podawaj z ugotowanym ryżem."], "tags": ["indyk", "ryż", "marchew"]}, {"id": "r073", "t": "Cielęcina pieczona z ziemniakami i cukinią", "m": ["ob"], "c": "Mięso", "al": [], "kcal": 620, "ing": [["cielęcina", "180 g"], ["ziemniaki", "250 g"], ["cukinia", "100 g"], ["oliwa", "1 łyżka"], ["majeranek", "szczypta"]], "steps": ["Cielęcinę natrzyj oliwą i majerankiem.", "Piecz z ziemniakami i cukinią 35 min w 190°C."], "tags": ["cielęcina", "ziemniaki", "cukinia"]}, {"id": "r074", "t": "Pieczone jabłko z cynamonem", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 140, "ing": [["jabłko", "150 g"], ["cynamon", "szczypta"]], "steps": ["Jabłko wydrąż, posyp cynamonem.", "Piecz 15–18 min w 180°C."], "tags": ["jabłko"]}, {"id": "r075", "t": "Pieczona gruszka z cynamonem", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 140, "ing": [["gruszka", "150 g"], ["cynamon", "szczypta"]], "steps": ["Gruszkę przekrój, posyp cynamonem.", "Piecz 15 min w 180°C."], "tags": ["gruszka"]}, {"id": "r076", "t": "Pieczone jabłko z borówkami", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 160, "ing": [["jabłko", "150 g"], ["borówki", "40 g"], ["cynamon", "szczypta"]], "steps": ["Jabłko wydrąż, wypełnij borówkami, posyp cynamonem.", "Piecz 15–18 min w 180°C."], "tags": ["jabłko", "borówki"]}, {"id": "r077", "t": "Twaróg z gruszką", "m": ["pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 300, "ing": [["twaróg półtłusty", "150 g"], ["jogurt naturalny", "2 łyżki"], ["gruszka", "120 g"]], "steps": ["Twaróg rozgnieć z jogurtem.", "Dodaj pokrojoną gruszkę."], "tags": ["twaróg półtłusty", "jogurt naturalny", "gruszka"]}, {"id": "r078", "t": "Kisiel borówkowy", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 150, "ing": [["borówki", "100 g"], ["mąka ziemniaczana", "1 łyżka"], ["woda", "200 ml"]], "steps": ["Zagotuj borówki z wodą.", "Zagęść mąką rozrobioną w zimnej wodzie, zagotuj."], "tags": ["borówki"]}, {"id": "r079", "t": "Budyń waniliowy na mleku", "m": ["pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 220, "ing": [["mleko", "250 ml"], ["mąka kukurydziana", "2 łyżki"], ["wanilia", "szczypta"]], "steps": ["Rozprowadź mąkę w części mleka.", "Zagotuj resztę mleka z wanilią, wlej zawiesinę, mieszaj do zgęstnienia."], "tags": ["mleko"]}, {"id": "r080", "t": "Ryżanka z borówkami", "m": ["pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 300, "ing": [["ryż", "50 g"], ["mleko", "250 ml"], ["borówki", "60 g"]], "steps": ["Ryż ugotuj na mleku.", "Dodaj borówki."], "tags": ["ryż", "mleko", "borówki"]}, {"id": "r081", "t": "Mus z pieczonych jabłek", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 130, "ing": [["jabłko", "200 g"], ["cynamon", "szczypta"]], "steps": ["Jabłka upiecz z cynamonem.", "Zblenduj lub rozgnieć widelcem na mus."], "tags": ["jabłko"]}, {"id": "r082", "t": "Banan pieczony z cynamonem", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 160, "ing": [["banan", "120 g"], ["cynamon", "szczypta"]], "steps": ["Banana naciśnij wzdłuż, posyp cynamonem.", "Piecz 12 min w 180°C."], "tags": ["banan"]}, {"id": "r083", "t": "Koktajl gruszkowy na kefirze", "m": ["pw"], "c": "Nabiał", "al": ["mleko"], "kcal": 230, "ing": [["kefir", "250 ml"], ["gruszka", "120 g"]], "steps": ["Zblenduj kefir z gruszką."], "tags": ["kefir", "gruszka"]}, {"id": "r084", "t": "Placuszki bananowe", "m": ["pw"], "c": "Owoce i desery", "al": ["jaja", "gluten"], "kcal": 280, "ing": [["banan", "100 g"], ["jajko", "1 szt."], ["płatki owsiane", "30 g"]], "steps": ["Banana rozgnieć, wymieszaj z jajkiem i płatkami.", "Smaż małe placuszki po 2 min z każdej strony."], "tags": ["banan", "jajka", "płatki owsiane"]}, {"id": "r085", "t": "Sałatka z jabłka i gruszki z jogurtem", "m": ["pw"], "c": "Owoce i desery", "al": ["mleko"], "kcal": 220, "ing": [["jabłko", "100 g"], ["gruszka", "100 g"], ["jogurt naturalny", "100 g"]], "steps": ["Owoce pokrój w kostkę.", "Zalej jogurtem."], "tags": ["jabłko", "gruszka", "jogurt naturalny"]}, {"id": "r086", "t": "Grzanki z masłem i pieczoną gruszką", "m": ["pw"], "c": "Owoce i desery", "al": ["gluten", "mleko"], "kcal": 260, "ing": [["pieczywo orkiszowe", "2 kromki"], ["gruszka", "120 g"], ["masło", "5 g"]], "steps": ["Pieczywo podpiecz i posmaruj masłem.", "Ułóż plasterki pieczonej gruszki."], "tags": ["pieczywo orkiszowe", "gruszka"]}, {"id": "r087", "t": "Twarożek z brzoskwinią i owsem", "m": ["pw"], "c": "Nabiał", "al": ["mleko", "gluten"], "kcal": 320, "ing": [["twaróg półtłusty", "150 g"], ["brzoskwinia", "100 g"], ["płatki owsiane", "15 g"]], "steps": ["Twaróg rozgnieć, dodaj pokrojoną brzoskwinię.", "Posyp płatkami owsianymi."], "tags": ["twaróg półtłusty", "brzoskwinia", "płatki owsiane"]}, {"id": "r088", "t": "Mus bananowo-jagodowy", "m": ["pw"], "c": "Owoce i desery", "al": [], "kcal": 150, "ing": [["banan", "120 g"], ["borówki", "60 g"]], "steps": ["Zblenduj banana z borówkami na gładki mus."], "tags": ["banan", "borówki"]}, {"id": "r089", "t": "Krem z dyni z grzankami", "m": ["ko", "ob"], "c": "Zupy", "al": ["gluten", "mleko"], "kcal": 450, "ing": [["dynia", "250 g"], ["marchew", "80 g"], ["ziemniaki", "100 g"], ["masło", "10 g"], ["pieczywo orkiszowe", "1 kromka"]], "steps": ["Warzywa podduś na maśle, zalej wodą, gotuj 20 min.", "Zblenduj na krem, podawaj z grzankami."], "tags": ["dynia", "marchew", "ziemniaki", "pieczywo orkiszowe"]}, {"id": "r090", "t": "Krem z marchwi i batata", "m": ["ko", "ob"], "c": "Zupy", "al": ["gluten", "mleko"], "kcal": 470, "ing": [["marchew", "150 g"], ["batat", "150 g"], ["ziemniaki", "80 g"], ["masło", "10 g"], ["pieczywo orkiszowe", "1 kromka"]], "steps": ["Warzywa ugotuj do miękkości (20–25 min).", "Zblenduj z masłem, podawaj z grzankami."], "tags": ["marchew", "batat", "ziemniaki", "pieczywo orkiszowe"]}, {"id": "r091", "t": "Krem z cukinii z grzankami", "m": ["ko", "ob"], "c": "Zupy", "al": ["gluten", "mleko"], "kcal": 400, "ing": [["cukinia", "250 g"], ["ziemniaki", "100 g"], ["masło", "10 g"], ["pieczywo orkiszowe", "1 kromka"]], "steps": ["Cukinię i ziemniaki ugotuj, zblenduj z masłem.", "Podawaj z grzankami."], "tags": ["cukinia", "ziemniaki", "pieczywo orkiszowe"]}, {"id": "r092", "t": "Zupa jarzynowa z indykiem", "m": ["ko", "ob"], "c": "Zupy", "al": [], "kcal": 420, "ing": [["indyk", "120 g"], ["marchew", "80 g"], ["ziemniaki", "120 g"], ["cukinia", "80 g"], ["pietruszka", "40 g"]], "steps": ["Indyka gotuj 20 min (bez cebuli).", "Dodaj pokrojone warzywa, gotuj 15 min."], "tags": ["indyk", "marchew", "ziemniaki", "cukinia", "pietruszka"]}, {"id": "r093", "t": "Zupa ziemniaczana z koperkiem", "m": ["ko", "ob"], "c": "Zupy", "al": [], "kcal": 380, "ing": [["ziemniaki", "250 g"], ["marchew", "80 g"], ["pietruszka", "40 g"], ["koperek", "1 łyżka"]], "steps": ["Warzywa ugotuj do miękkości.", "Rozgnieć częściowo, posyp koperkiem."], "tags": ["ziemniaki", "marchew", "pietruszka"]}, {"id": "r094", "t": "Rosołek warzywny z ryżem", "m": ["ko"], "c": "Zupy", "al": [], "kcal": 300, "ing": [["marchew", "80 g"], ["pietruszka", "40 g"], ["ryż", "50 g"], ["lubczyk", "szczypta"]], "steps": ["Warzywa gotuj 20 min, dopraw lubczykiem.", "Dodaj ugotowany ryż."], "tags": ["marchew", "pietruszka", "ryż"]}, {"id": "r095", "t": "Jajecznica na maśle z pieczywem", "m": ["ko"], "c": "Śniadania", "al": ["jaja", "mleko", "gluten"], "kcal": 400, "ing": [["jajka", "3 szt."], ["masło", "10 g"], ["pieczywo orkiszowe", "2 kromki"]], "steps": ["Usmaż jajecznicę na maśle (nie przesmażaj).", "Podawaj z pieczywem."], "tags": ["jajka", "pieczywo orkiszowe"]}, {"id": "r096", "t": "Omlet z serem i cukinią", "m": ["ko"], "c": "Śniadania", "al": ["jaja", "mleko"], "kcal": 380, "ing": [["jajka", "3 szt."], ["ser żółty łagodny", "30 g"], ["cukinia", "80 g"], ["masło", "10 g"]], "steps": ["Cukinię podsmaż na maśle.", "Zalej jajkami, posyp serem, smaż pod przykryciem 5 min."], "tags": ["jajka", "ser żółty łagodny", "cukinia"]}, {"id": "r097", "t": "Twarożek z koperkiem i pieczywem (kolacja)", "m": ["ko"], "c": "Nabiał", "al": ["mleko", "gluten"], "kcal": 350, "ing": [["twaróg półtłusty", "150 g"], ["koperek", "1 łyżka"], ["ogórek", "60 g"], ["pieczywo orkiszowe", "2 kromki"]], "steps": ["Twaróg wymieszaj z koperkiem.", "Podawaj z pieczywem i ogórkiem."], "tags": ["twaróg półtłusty", "ogórek", "pieczywo orkiszowe"]}, {"id": "r098", "t": "Pstrąg pieczony z cukinią", "m": ["ko", "ob"], "c": "Ryby", "al": ["ryby"], "kcal": 600, "ing": [["pstrąg", "180 g"], ["cukinia", "100 g"], ["ziemniaki", "200 g"], ["oliwa", "1 łyżka"]], "steps": ["Pstrąga, cukinię i ziemniaki ułóż na blaszce, skrop oliwą.", "Piecz 20 min w 190°C."], "tags": ["pstrąg", "cukinia", "ziemniaki"]}, {"id": "r099", "t": "Łosoś pieczony z cukinią", "m": ["ko", "ob"], "c": "Ryby", "al": ["ryby"], "kcal": 520, "ing": [["łosoś", "160 g"], ["cukinia", "120 g"], ["oliwa", "1 łyżka"], ["koperek", "1 łyżka"]], "steps": ["Łososia i cukinię skrop oliwą, posyp koperkiem.", "Piecz 16 min w 190°C."], "tags": ["łosoś", "cukinia"]}, {"id": "r100", "t": "Dorsz na parze z ziemniakami", "m": ["ko", "ob"], "c": "Ryby", "al": ["ryby"], "kcal": 480, "ing": [["dorsz", "200 g"], ["ziemniaki", "250 g"], ["koperek", "1 łyżka"]], "steps": ["Dorsza gotuj na parze 10 min.", "Podawaj z ziemniakami i koperkiem."], "tags": ["dorsz", "ziemniaki"]}, {"id": "r101", "t": "Sałatka z pieczonym kurczakiem i ziemniakami", "m": ["ko"], "c": "Mięso", "al": [], "kcal": 520, "ing": [["kurczak", "150 g"], ["ziemniaki", "200 g"], ["sałata", "20 g"], ["ogórek", "60 g"], ["oliwa", "1 łyżka"]], "steps": ["Kurczaka upiecz i pokrój.", "Wymieszaj z ciepłymi ziemniakami, sałatą i ogórkiem, skrop oliwą."], "tags": ["kurczak", "ziemniaki", "sałata", "ogórek"]}, {"id": "r102", "t": "Kasza jaglana z duszoną cukinią i marchewką", "m": ["ko"], "c": "Kasze i dodatki", "al": ["mleko"], "kcal": 420, "ing": [["kasza jaglana", "60 g"], ["cukinia", "100 g"], ["marchew", "80 g"], ["masło", "10 g"]], "steps": ["Warzywa duś na maśle 8 min.", "Podawaj z ugotowaną kaszą jaglaną."], "tags": ["kasza jaglana", "cukinia", "marchew"]}, {"id": "r103", "t": "Puree ziemniaczane z jajkiem i buraczkami", "m": ["ko"], "c": "Kasze i dodatki", "al": ["mleko", "jaja"], "kcal": 480, "ing": [["ziemniaki", "250 g"], ["mleko", "40 ml"], ["masło", "10 g"], ["jajka", "2 szt."], ["buraki", "100 g"]], "steps": ["Ziemniaki ugnieć z mlekiem i masłem.", "Podawaj z jajkami na twardo i tartymi buraczkami."], "tags": ["ziemniaki", "mleko", "jajka", "buraki"]}, {"id": "r104", "t": "Kanapki z pastą jajeczną (kolacja)", "m": ["ko"], "c": "Kanapki", "al": ["gluten", "jaja", "mleko"], "kcal": 420, "ing": [["pieczywo orkiszowe", "2 kromki"], ["jajka", "2 szt."], ["jogurt naturalny", "1 łyżka"], ["ogórek", "50 g"]], "steps": ["Jajka posiekaj i wymieszaj z jogurtem.", "Nałóż na pieczywo, dodaj ogórek."], "tags": ["pieczywo orkiszowe", "jajka", "jogurt naturalny", "ogórek"]}, {"id": "r105", "t": "Zupa krem z marchwi z ryżem", "m": ["ko", "ob"], "c": "Zupy", "al": [], "kcal": 360, "ing": [["marchew", "200 g"], ["ziemniaki", "80 g"], ["ryż", "30 g"], ["oliwa", "1 łyżka"]], "steps": ["Marchew i ziemniaki ugotuj, zblenduj na krem.", "Dodaj ugotowany ryż i łyżkę oliwy."], "tags": ["marchew", "ziemniaki", "ryż"]}], "groups": {"indyk": "Mięso i jaja", "cielęcina": "Mięso i jaja", "królik": "Mięso i jaja", "kurczak": "Mięso i jaja", "chuda wołowina": "Mięso i jaja", "jajka": "Mięso i jaja", "łosoś": "Ryby", "dorsz": "Ryby", "pstrąg": "Ryby", "sandacz": "Ryby", "mintaj": "Ryby", "morszczuk": "Ryby", "mleko": "Nabiał", "jogurt naturalny": "Nabiał", "kefir": "Nabiał", "maślanka": "Nabiał", "twaróg półtłusty": "Nabiał", "serek wiejski": "Nabiał", "ser żółty łagodny": "Nabiał", "płatki owsiane": "Kasze i pieczywo", "kasza jaglana": "Kasze i pieczywo", "kasza gryczana": "Kasze i pieczywo", "kasza manna": "Kasze i pieczywo", "ryż": "Kasze i pieczywo", "makaron": "Kasze i pieczywo", "pieczywo orkiszowe": "Kasze i pieczywo", "marchew": "Warzywa", "cukinia": "Warzywa", "dynia": "Warzywa", "ziemniaki": "Warzywa", "batat": "Warzywa", "ogórek": "Warzywa", "sałata": "Warzywa", "buraki": "Warzywa", "pietruszka": "Warzywa", "szpinak": "Warzywa", "jabłko": "Owoce", "gruszka": "Owoce", "banan": "Owoce", "borówki": "Owoce", "brzoskwinia": "Owoce", "masło migdałowe": "Inne"}, "meals": [{"key": "s1", "label": "Pierwsze śniadanie", "emoji": "🌅"}, {"key": "s2", "label": "Drugie śniadanie", "emoji": "🥪"}, {"key": "ob", "label": "Obiad", "emoji": "🍲"}, {"key": "pw", "label": "Podwieczorek", "emoji": "🍎"}, {"key": "ko", "label": "Kolacja", "emoji": "🌙"}]};
+const RECIPES = APP_DATA.recipes;
+const GROUPS = APP_DATA.groups;
+const MEALS = APP_DATA.meals;
+const byId = Object.fromEntries(RECIPES.map(r=>[r.id,r]));
+const mealLabel = Object.fromEntries(MEALS.map(m=>[m.key,m.label]));
+const GROUP_ORDER = ["Mięso i jaja","Ryby","Nabiał","Kasze i pieczywo","Warzywa","Owoce","Inne"];
+const AL_LABEL = {gluten:"gluten", mleko:"nabiał / mleko", jaja:"jaja", ryby:"ryby", orzechy:"orzechy"};
+
+/* ---------- pamiec (localStorage z awaryjnym trybem) ---------- */
+const store = (()=>{
+  let mem={}; let has=false;
+  try{ const k="__t"; localStorage.setItem(k,"1"); localStorage.removeItem(k); has=true; }catch(e){ has=false; }
+  return {
+    get(k){ try{ if(has){ const v=localStorage.getItem(k); return v?JSON.parse(v):null; } }catch(e){} return (k in mem)?mem[k]:null; },
+    set(k,v){ try{ if(has){ localStorage.setItem(k,JSON.stringify(v)); return; } }catch(e){} mem[k]=v; }
+  };
+})();
+const getSaved = ()=> store.get("mk_saved") || [];
+const setSaved = (a)=> store.set("mk_saved", a);
+const isSaved = (id)=> getSaved().some(r=>r.id===id);
+
+/* ---------- stan + nawigacja ---------- */
+let stack=[{view:"home"}];
+let ctx={ meal:null, selected:new Set(), results:[], offset:0 };
+const main=document.getElementById("main");
+
+function go(view, opts={}){ stack.push(Object.assign({view},opts)); render(); window.scrollTo(0,0); }
+function back(){ if(stack.length>1){ stack.pop(); render(); window.scrollTo(0,0);} }
+function home(){ stack=[{view:"home"}]; ctx.selected=new Set(); render(); window.scrollTo(0,0); }
+
+function render(){
+  const top=stack[stack.length-1];
+  document.getElementById("backBtn").style.visibility = stack.length>1 ? "visible":"hidden";
+  const titles={home:"Nasza Kuchnia", meal:"Wybierz składniki", results:"Propozycje", recipe:"Przepis", saved:"Moje przepisy"};
+  document.getElementById("barTitle").textContent = titles[top.view]||"Nasza Kuchnia";
+  if(top.view==="home") return renderHome();
+  if(top.view==="meal") return renderMeal(top.meal);
+  if(top.view==="results") return renderResults();
+  if(top.view==="recipe") return renderRecipe(top.id);
+  if(top.view==="saved") return renderSaved();
+}
+
+/* ---------- ekran glowny ---------- */
+function renderHome(){
+  let h = '<p class="kicker">Co dziś gotujemy?</p>';
+  h += '<h1 class="screen">Wybierz posiłek</h1>';
+  h += '<p class="lead">Dotknij posiłek, potem zaznacz produkty, które masz. Pokażę 3 przepisy do wyboru.</p>';
+  MEALS.forEach(m=>{
+    h += '<button class="meal-btn" data-action="open-meal" data-meal="'+m.key+'">'+
+         '<span class="emoji">'+m.emoji+'</span><span>'+m.label+'</span><span class="arrow">›</span></button>';
+  });
+  const n=getSaved().length;
+  h += '<div class="saved-entry"><button class="meal-btn" data-action="go-saved">'+
+       '<span class="emoji">⭐</span><span>Moje przepisy'+(n?(' ('+n+')'):'')+'</span><span class="arrow">›</span></button></div>';
+  main.innerHTML=h;
+}
+
+/* ---------- ekran skladnikow ---------- */
+function renderMeal(meal){
+  ctx.meal=meal; ctx.selected=new Set();
+  const recipes=RECIPES.filter(r=>r.m.includes(meal));
+  // zbierz dostepne skladniki (tagi) z przepisow tego posilku
+  const tagset=new Set(); recipes.forEach(r=>r.tags.forEach(t=>tagset.add(t)));
+  // pogrupuj
+  const grouped={};
+  [...tagset].forEach(t=>{ const g=GROUPS[t]||"Inne"; (grouped[g]=grouped[g]||[]).push(t); });
+  let h='<h2 class="screen">'+mealLabel[meal]+'</h2>';
+  h+='<p class="lead">Zaznacz, co masz w domu (możesz kilka). Nie musisz nic zaznaczać — wtedy pokażę propozycje dnia.</p>';
+  h+='<div class="selbar"><div class="selcount" id="selcount">Wybrane produkty: 0</div></div>';
+  GROUP_ORDER.forEach(g=>{
+    if(!grouped[g]) return;
+    grouped[g].sort((a,b)=>a.localeCompare(b));
+    h+='<div class="grouplabel">'+g+'</div><div class="chips">';
+    grouped[g].forEach(t=>{
+      h+='<button class="chip" data-action="toggle-ing" data-ing="'+t+'" aria-pressed="false">'+
+         '<span class="tick">✓</span>'+t+'</button>';
+    });
+    h+='</div>';
+  });
+  h+='<button class="primary-btn" data-action="show-results">Pokaż 3 przepisy</button>';
+  main.innerHTML=h;
+}
+function updateSelCount(){
+  const el=document.getElementById("selcount");
+  if(el) el.textContent="Wybrane produkty: "+ctx.selected.size;
+}
+
+/* ---------- dopasowanie + wyniki ---------- */
+function rankRecipes(meal, selected){
+  const list=RECIPES.filter(r=>r.m.includes(meal));
+  if(selected.size===0){ return shuffle(list.slice()); }
+  return list.map(r=>{
+    let score=0; r.tags.forEach(t=>{ if(selected.has(t)) score++; });
+    return {r,score};
+  }).sort((a,b)=> b.score-a.score || a.r.t.localeCompare(b.r.t)).map(x=>x.r);
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+function showResults(){
+  ctx.results=rankRecipes(ctx.meal, ctx.selected);
+  ctx.offset=0;
+  go("results");
+}
+function threeNow(){
+  const n=ctx.results.length, out=[];
+  for(let i=0;i<Math.min(3,n);i++){ out.push(ctx.results[(ctx.offset+i)%n]); }
+  return out;
+}
+function renderResults(){
+  const three=threeNow();
+  let h='<h2 class="screen">Wybierz przepis</h2>';
+  if(ctx.selected.size>0){
+    h+='<p class="lead">Dopasowane do produktów: '+[...ctx.selected].join(", ")+'.</p>';
+  }else{
+    h+='<p class="lead">Trzy propozycje na '+mealLabel[ctx.meal].toLowerCase()+'.</p>';
+  }
+  three.forEach(r=>{
+    h+='<button class="card" data-action="open-recipe" data-id="'+r.id+'">'+
+       '<h3>'+r.t+'</h3><div class="metarow">'+
+       '<span class="badge">ok. '+r.kcal+' kcal</span>'+
+       '<span class="catbadge">'+r.c+'</span>'+ allergTiny(r) +
+       '</div><div class="go">Zobacz przepis ›</div></button>';
+  });
+  h+='<button class="ghost-btn" data-action="more-results">Pokaż inne propozycje ↻</button>';
+  main.innerHTML=h;
+}
+function allergTiny(r){
+  if(!r.al.length) return '<span class="badge" style="background:#E9F1E4;color:#4F6A3F;">bez alergenów</span>';
+  return '<span class="catbadge">alergeny: '+r.al.map(a=>AL_LABEL[a]).join(", ")+'</span>';
+}
+
+/* ---------- szczegol przepisu ---------- */
+function renderRecipe(id){
+  const r=byId[id]; const saved=isSaved(id);
+  let h='<h1 class="rtitle">'+r.t+'</h1>';
+  h+='<div class="infogrid"><span class="badge">ok. '+r.kcal+' kcal · 1 porcja</span>'+
+     '<span class="catbadge">'+r.c+'</span>'+
+     '<span class="catbadge">'+r.m.map(m=>mealLabel[m]).join(" · ")+'</span></div>';
+  h+='<div class="seclabel">Alergeny</div>';
+  if(r.al.length){
+    h+='<div class="alerts">'+r.al.map(a=>'<span class="alert-pill">'+AL_LABEL[a]+'</span>').join("")+'</div>';
+  }else{
+    h+='<div class="alert-none">Brak typowych alergenów</div>';
+  }
+  h+='<div class="seclabel">Składniki (na 1 osobę)</div><ul class="ing">';
+  r.ing.forEach(([n,a])=>{ h+='<li><span>'+n+'</span><span class="amt">'+a+'</span></li>'; });
+  h+='</ul>';
+  h+='<div class="seclabel">Przygotowanie</div><ol class="steps">';
+  r.steps.forEach(s=>{ h+='<li>'+s+'</li>'; });
+  h+='</ol>';
+  h+='<div class="actions">';
+  h+='<button class="btn-send" data-action="share" data-id="'+id+'">📤 Wyślij przepis</button>';
+  if(saved){
+    h+='<button class="btn-save saved" disabled>✓ Zapisano w „Moje przepisy”</button>';
+    h+='<button class="btn-remove" data-action="remove-saved" data-id="'+id+'">Usuń z zapisanych</button>';
+  }else{
+    h+='<button class="btn-save" data-action="save" data-id="'+id+'">⭐ Zapisz przepis</button>';
+  }
+  h+='</div>';
+  main.innerHTML=h;
+}
+
+/* ---------- moje przepisy ---------- */
+function renderSaved(){
+  const saved=getSaved();
+  if(!saved.length){
+    main.innerHTML='<h2 class="screen">Moje przepisy</h2>'+
+      '<div class="empty"><span class="big">⭐</span>Nie masz jeszcze zapisanych przepisów.<br>'+
+      'Otwórz dowolny przepis i dotknij „Zapisz przepis”.</div>'+
+      '<button class="primary-btn" data-action="home">Wróć do wyboru posiłku</button>';
+    return;
+  }
+  // grupuj po kategorii
+  const groups={};
+  saved.forEach(r=>{ (groups[r.c]=groups[r.c]||[]).push(r); });
+  let h='<h2 class="screen">Moje przepisy</h2>';
+  h+='<p class="lead">Zapisane przepisy, uporządkowane w kategoriach.</p>';
+  Object.keys(groups).sort((a,b)=>a.localeCompare(b)).forEach(cat=>{
+    h+='<div class="saved-group"><h2>'+cat+'</h2>';
+    groups[cat].forEach(r=>{
+      h+='<div class="saved-item">'+
+         '<span class="name" data-action="open-recipe" data-id="'+r.id+'">'+r.t+'</span>'+
+         '<button class="mini open" data-action="open-recipe" data-id="'+r.id+'" aria-label="Otwórz">›</button>'+
+         '<button class="mini del" data-action="remove-saved" data-id="'+r.id+'" aria-label="Usuń">🗑</button>'+
+         '</div>';
+    });
+    h+='</div>';
+  });
+  main.innerHTML=h;
+}
+
+/* ---------- wysylanie ---------- */
+function recipeText(r){
+  const L=[];
+  L.push(r.t);
+  L.push("Kaloryczność: ok. "+r.kcal+" kcal (1 porcja)");
+  L.push("Alergeny: "+(r.al.length? r.al.map(a=>AL_LABEL[a]).join(", "):"brak typowych"));
+  L.push("");
+  L.push("Składniki (na 1 osobę):");
+  r.ing.forEach(([n,a])=>L.push("• "+n+" — "+a));
+  L.push("");
+  L.push("Przygotowanie:");
+  r.steps.forEach((s,i)=>L.push((i+1)+". "+s));
+  L.push("");
+  L.push("— Nasza Kuchnia");
+  return L.join("\n");
+}
+async function shareRecipe(id){
+  const r=byId[id]; const text=recipeText(r);
+  if(navigator.share){
+    try{ await navigator.share({title:r.t, text:text}); return; }
+    catch(e){ if(e && e.name==="AbortError") return; }
+  }
+  try{ await navigator.clipboard.writeText(text); toast("Skopiowano przepis — wklej w wiadomości"); return; }catch(e){}
+  showCopyModal(text);
+}
+function showCopyModal(text){
+  const wrap=document.createElement("div");
+  wrap.className="modal"; wrap.id="copyModal";
+  wrap.innerHTML='<div class="box"><h3>Skopiuj przepis</h3>'+
+    '<textarea readonly>'+text.replace(/</g,"&lt;")+'</textarea>'+
+    '<button class="primary-btn" data-action="close-modal">Gotowe</button></div>';
+  document.body.appendChild(wrap);
+  const ta=wrap.querySelector("textarea"); ta.focus(); ta.select();
+}
+
+/* ---------- toast ---------- */
+let toastT=null;
+function toast(msg){
+  const t=document.getElementById("toast");
+  t.textContent=msg; t.classList.add("show");
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+/* ---------- delegacja klikniec ---------- */
+document.body.addEventListener("click", (e)=>{
+  const t=e.target.closest("[data-action]"); if(!t) return;
+  const a=t.dataset.action;
+  if(a==="back") return back();
+  if(a==="home") return home();
+  if(a==="open-meal") return go("meal",{meal:t.dataset.meal});
+  if(a==="go-saved") return go("saved");
+  if(a==="toggle-ing"){
+    const ing=t.dataset.ing;
+    if(ctx.selected.has(ing)){ ctx.selected.delete(ing); t.classList.remove("on"); t.setAttribute("aria-pressed","false"); }
+    else { ctx.selected.add(ing); t.classList.add("on"); t.setAttribute("aria-pressed","true"); }
+    return updateSelCount();
+  }
+  if(a==="show-results") return showResults();
+  if(a==="more-results"){ const n=ctx.results.length; ctx.offset=(ctx.offset+3)%(n||1); return renderResults(); }
+  if(a==="open-recipe") return go("recipe",{id:t.dataset.id});
+  if(a==="share") return shareRecipe(t.dataset.id);
+  if(a==="save"){ const s=getSaved(); if(!s.some(r=>r.id===t.dataset.id)){ s.push(byId[t.dataset.id]); setSaved(s);} toast('Zapisano w „Moje przepisy” ✓'); return renderRecipe(t.dataset.id); }
+  if(a==="remove-saved"){ setSaved(getSaved().filter(r=>r.id!==t.dataset.id)); toast("Usunięto przepis");
+     const top=stack[stack.length-1]; if(top.view==="saved") return renderSaved(); return renderRecipe(t.dataset.id); }
+  if(a==="close-modal"){ const m=document.getElementById("copyModal"); if(m) m.remove(); return; }
+});
+
+/* ---------- PWA: service worker ---------- */
+if("serviceWorker" in navigator){
+  window.addEventListener("load", ()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); });
+}
+
+render();
+</script>
+</body>
+</html>

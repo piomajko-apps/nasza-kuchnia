@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import json, os
+import json, os, hashlib
 from recipes_data import R
 
 OUT = os.path.dirname(os.path.abspath(__file__))
@@ -569,7 +569,10 @@ with open(os.path.join(OUT,"manifest.webmanifest"),"w",encoding="utf-8") as f:
     json.dump(manifest,f,ensure_ascii=False,indent=2)
 
 # ---- service worker ----
-sw = """const CACHE="nasza-kuchnia-v1";
+# nazwa cache zalezy od hasha wygenerowanego index.html, wiec kazda zmiana
+# tresci (przepisy, kod) automatycznie unieważnia stary cache PWA u uzytkownikow
+sw_version = hashlib.sha1(html.encode("utf-8")).hexdigest()[:10]
+sw = """const CACHE="nasza-kuchnia-@@SW_VERSION@@";
 const ASSETS=["./","./index.html","./manifest.webmanifest",
   "./icon-192.png","./icon-512.png","./icon-maskable-512.png","./apple-touch-icon.png"];
 self.addEventListener("install",e=>{
@@ -588,7 +591,7 @@ self.addEventListener("fetch",e=>{
     }).catch(()=>caches.match("./index.html")))
   );
 });
-"""
+""".replace("@@SW_VERSION@@", sw_version)
 with open(os.path.join(OUT,"sw.js"),"w",encoding="utf-8") as f:
     f.write(sw)
 
